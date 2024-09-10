@@ -1,0 +1,35 @@
+2 visible devices: 
+ 
+['NVIDIA GeForce GTX 1080 Ti', 'NVIDIA GeForce GTX 1080 Ti']
+ 
+ detected.
+using device: cuda
+total desired batch size: 65536
+=> calculated gradient accumulation steps: 1
+FilenameObjFactory built successfully
+found 1 shards for split train
+found 1 shards for split val
+distribute strategy is set to default
+Loading checkpoint directory
+epoch: 0 / 50:
+[train] cost 0.7220888137817383s for one batch
+[train] cost 0.43424415588378906s for one batch
+validation loss: 4.3996
+[generation text] rank 0 sample 0: hello, I am a student and I come from the Earth,  for my blood, and be not.
+As'd news? that do,
+What
+[generation text] rank 0 sample 1: hello, I am a student and I come from the Earth,  thee thou'st to, I see an endorthy gates; my my country, my
+[generation text] rank 0 sample 2: hello, I am a student and I come from the Earth, 
+
+This we
+WhichUS:
+First Senator: you were of my life done
+[generation text] rank 0 sample 3: hello, I am a student and I come from the Earth, .
+
+
+
+
+And to thee 'twas presently his
+I never a
+epoch: 1 / 50:
+[train] cost 0.4328281879425049s for one batch

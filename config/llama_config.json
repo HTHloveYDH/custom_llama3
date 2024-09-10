@@ -1,0 +1,26 @@
+{
+    "model_type": "llama3_1B", 
+    "pos_encode": "rope",
+
+    "use_compile": false,
+    "load_weights": null,
+    "ckpt_path": "", 
+
+    "lora": false, 
+    "lora_alpha": 1,
+    "lora_rank": 1, 
+
+    "params": {
+        "dim": 512, 
+        "n_layers": 8, 
+        "n_heads": 8, 
+        "n_kv_heads": 4, 
+        "vocab_size": 50257, 
+        "multiple_of": 1024, 
+        "ffn_dim_multiplier": 1.3, 
+        "norm_eps": 1e-5, 
+        "rope_theta": 500000.0, 
+        "max_batch_size": 4, 
+        "max_seq_len": 1024
+    }
+}
