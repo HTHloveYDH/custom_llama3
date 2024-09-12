@@ -8,7 +8,8 @@ import torch.multiprocessing as mp
 
 sys.path.append(os.getcwd())
 from dist.distribute import init_dist, ternimate_dist
-from data_pipeline.demo import DemoDataLoader
+# from data_pipeline.demo import DemoDataLoader
+from data_pipeline.Tokenizer import Tokenizer, ChatFormat
 from data_pipeline.DataLoaderLiteFactory import DataLoaderLiteFactory
 from models.get_model import get_model
 from train.train_funcs import train_on_epoch, valid_on_epoch, get_optimizer, resume_from_ckpt
@@ -59,6 +60,7 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
     data_format = data_config['data_format']
     total_token_num = data_config['total_token_num']
     # llama3 configs
+    tokenizer_path = llama3_config['tokenizer_path']
     use_compile = llama3_config['use_compile']
     # set up DP (distributed data parallel or fully sharded data parallel) process group.
     # torchrun command sets the env variables RANK, LOCAL_RANK, and WORLD_SIZE
@@ -86,26 +88,28 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
         data_format, 
         **{
             'B': max_batch_size, 'T': max_seq_len, 'process_rank': dp_global_rank, 
-            'num_processes': dp_world_size, 'data_root': data_root, 'master_process': master_process, 
-            'split': 'train'
+            'num_processes': dp_world_size, 'tokenizer_path': tokenizer_path, 
+            'data_root': data_root, 'master_process': master_process, 'split': 'train'
         }
     )
     val_data_loader = DataLoaderLite_factory.create(
         data_format, 
         **{
             'B': max_batch_size, 'T': max_seq_len, 'process_rank': dp_global_rank, 
-            'num_processes': dp_world_size, 'data_root': data_root, 'master_process': master_process, 
-            'split': 'val'
+            'num_processes': dp_world_size, 'tokenizer_path': tokenizer_path, 
+            'data_root': data_root, 'master_process': master_process, 'split': 'val'
         }
     )
 
     ''' ____________________________________ build & compile model ___________________________________ '''
     device_ids = [dp_local_rank]
-    model, raw_model, enc = get_model(llama3_config, device, dist_strategy, device_ids)
+    model, raw_model = get_model(llama3_config, device, dist_strategy, device_ids)
     
     ''' ____________________________________________ train ___________________________________________ '''
     # get optimizer
     optimizer = get_optimizer(raw_model, weight_decay, learning_rate)
+    # get tokenizer
+    tokenizer = Tokenizer(tokenizer_path)
     # start train loop
     resume_from_ckpt(raw_model, ckpt_dir)
     for epoch in range(epochs):
@@ -123,7 +127,7 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
             #     model, "Hello, I'm a language model,", gen_batch_size, gen_len, temperature, top_p, 
             #     device
             # )
-            generate(model, enc, prompt, device, gen_batch_size, gen_len, dp_global_rank)
+            generate(model, tokenizer, prompt, device, gen_batch_size, gen_len, dp_global_rank)
     # terminate process group
     ternimate_dist(dist_strategy)
 

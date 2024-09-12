@@ -46,5 +46,4 @@ def get_model(llama_config:dict, device, dist_strategy:str, device_ids:list):
         # )
     print(f'distribute strategy is set to {dist_strategy}')
     raw_model = model.module if dist_strategy in ['ddp', 'fsdp'] else model # always contains the 'raw' unwrapped model
-    enc = tiktoken.get_encoding('gpt2')
-    return model, raw_model, enc
+    return model, raw_model

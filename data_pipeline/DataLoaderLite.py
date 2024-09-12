@@ -3,16 +3,16 @@ import json
 
 import torch
 import numpy as np
-import tiktoken
+from data_pipeline.Tokenizer import Tokenizer, ChatFormat
 
 
 class BaseDataLoaderLite:
-    def __init__(self, B, T, process_rank:int, num_processes:int):
+    def __init__(self, B, T, process_rank:int, num_processes:int, tokenizer_path:str):
         self.B = B
         self.T = T
         self.process_rank = process_rank
         self.num_processes = num_processes
-        self.enc = tiktoken.get_encoding('gpt2')
+        self.tokenizer = Tokenizer(tokenizer_path)
 
     def reset(self):
         # state, init at shard zero
@@ -38,8 +38,9 @@ class BaseDataLoaderLite:
         NotImplementedError(" Can not call 'load_tokens' via base class 'BaseDataLoaderLite'! ")
 
 class NpyDataLoaderLite(BaseDataLoaderLite):
-    def __init__(self, B, T, process_rank:int, num_processes:int, data_root:str, master_process:bool, split:str):
-        super(NpyDataLoaderLite, self).__init__(B, T, process_rank, num_processes)
+    def __init__(self, B, T, process_rank:int, num_processes:int, tokenizer_path:str, data_root:str, \
+                 master_process:bool, split:str):
+        super(NpyDataLoaderLite, self).__init__(B, T, process_rank, num_processes, tokenizer_path)
         assert split in {'train', 'val'}
         # get filenames
         files = os.listdir(data_root)  # all data files on current node
@@ -59,8 +60,9 @@ class NpyDataLoaderLite(BaseDataLoaderLite):
         return tensor_tokens
 
 class TxtDataLoaderLite(BaseDataLoaderLite):
-    def __init__(self, B, T, process_rank:int, num_processes:int, data_root:str, master_process:bool, split:str):
-        super(TxtDataLoaderLite, self).__init__(B, T, process_rank, num_processes)
+    def __init__(self, B, T, process_rank:int, num_processes:int, tokenizer_path:str, data_root:str, \
+                 master_process:bool, split:str):
+        super(TxtDataLoaderLite, self).__init__(B, T, process_rank, num_processes, tokenizer_path)
         assert split in {'train', 'val'}
         # get filenames
         files = os.listdir(data_root)  # all data files on current node
@@ -76,13 +78,14 @@ class TxtDataLoaderLite(BaseDataLoaderLite):
     def load_tokens(self, filename:str):
         with open(filename, 'r') as f:
             text = f.read()
-        tokens = self.enc.encode(text)
+        tokens = self.tokenizer.encode(text)
         tensor_tokens = torch.tensor(tokens, dtype=torch.long)
         return tensor_tokens
 
 class JsonDataLoaderLite(BaseDataLoaderLite):
-    def __init__(self, B, T, process_rank:int, num_processes:int, data_root:str, master_process:bool, split:str):
-        super(JsonDataLoaderLite, self).__init__(B, T, process_rank, num_processes)
+    def __init__(self, B, T, process_rank:int, num_processes:int, tokenizer_path:str, data_root:str, \
+                 master_process:bool, split:str):
+        super(JsonDataLoaderLite, self).__init__(B, T, process_rank, num_processes, tokenizer_path)
         assert split in {'train', 'val'}
         # get filenames
         files = os.listdir(data_root)  # all data files on current node
@@ -99,6 +102,6 @@ class JsonDataLoaderLite(BaseDataLoaderLite):
         with open(filename, 'r') as f:
             json_content = json.load(f)
         text = json_content['text']
-        tokens = self.enc.encode(text)
+        tokens = self.tokenizer.encode(text)
         tensor_tokens = torch.tensor(tokens, dtype=torch.long)
         return tensor_tokens

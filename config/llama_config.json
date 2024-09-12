@@ -1,6 +1,7 @@
 {
     "model_type": "llama3_1B", 
     "pos_encode": "rope",
+    "tokenizer_path": "./tokenizer/tokenizer.model", 
 
     "use_compile": false,
     "load_weights": null,

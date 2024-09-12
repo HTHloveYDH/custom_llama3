@@ -4,10 +4,10 @@ from torch.nn import functional as F
 from utils.get_device_type import get_device_type
 
 
-def generate(model, enc, prompt:str, device:str, gen_batch_size:int, gen_len:int, dp_global_rank=0):
+def generate(model, tokenizer, prompt:str, device:str, gen_batch_size:int, gen_len:int, dp_global_rank=0):
     model.eval()
     # preprocess for input prompt: python <class 'list'>
-    tokens = enc.encode(prompt)  # python <class 'list'>
+    tokens = tokenizer.encode(prompt)  # python <class 'list'>
     tokens = torch.tensor(tokens, dtype=torch.long)  # shape: (len(prompt))
     tokens = tokens.unsqueeze(0).repeat(gen_batch_size, 1)  # shape: (gen_batch_size, len(prompt))
     xgen = tokens.to(device)  # current shape: [gen_batch_size, len(prompt))
@@ -38,5 +38,5 @@ def generate(model, enc, prompt:str, device:str, gen_batch_size:int, gen_len:int
     # print the generated text
     for i in range(gen_batch_size):
         tokens = xgen[i, :gen_len].tolist()
-        decoded = enc.decode(tokens)
+        decoded = tokenizer.decode(tokens)
         print(f'[generation text] rank {dp_global_rank} sample {i}: {decoded}')
