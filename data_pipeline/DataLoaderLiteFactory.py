@@ -1,4 +1,4 @@
-from data_pipeline.PTDataLoaderLite import NpyDataLoaderLite, TxtDataLoaderLite, JsonDataLoaderLite
+from data_pipeline.PTDataLoaderLite import NpyPTDataLoaderLite, TxtPTDataLoaderLite, JsonPTDataLoaderLite
 from data_pipeline.SFTDataLoaderLite import SFTDataLoaderLite
 
 
@@ -6,15 +6,15 @@ class DataLoaderLiteFactory:
     classname_map = {
         True: {'json': SFTDataLoaderLite}, 
         False: {
-            'npy': NpyDataLoaderLite, 
-            'txt': TxtDataLoaderLite, 
-            'json': JsonDataLoaderLite
+            'npy': NpyPTDataLoaderLite, 
+            'txt': TxtPTDataLoaderLite, 
+            'json': JsonPTDataLoaderLite
         }
     }
     valid_classname_list = [
-        'NpyDataLoaderLite', 
-        'TextDataLoaderLite', 
-        'JsonDataLoaderLite', 
+        'NpyPTDataLoaderLite', 
+        'TxtPTDataLoaderLite', 
+        'JsonPTDataLoaderLite', 
         'SFTDataLoaderLite'
     ]
 
