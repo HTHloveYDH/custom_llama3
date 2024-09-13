@@ -130,7 +130,7 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
             #     model, "Hello, I'm a language model,", gen_batch_size, gen_len, temperature, top_p, 
             #     device
             # )
-            generate(
+            return_messages = generate(
                 model, tokenizer, chat_format, prompt, device, gen_batch_size, gen_len, dialog, 
                 dp_global_rank
             )
