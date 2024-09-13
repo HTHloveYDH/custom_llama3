@@ -219,11 +219,14 @@ class ChatFormat:
         tokens.append(self.tokenizer.special_tokens["<|eot_id|>"])
         return tokens
 
-    def encode_dialog_prompt(self, dialog: Dialog) -> List[int]:
+    def encode_dialog_prompt(self, dialog: Dialog, pad: bool = False, max_len: int = 2048) -> List[int]:
         tokens = []
         tokens.append(self.tokenizer.special_tokens["<|begin_of_text|>"])
         for message in dialog:
             tokens.extend(self.encode_message(message))
         # Add the start of an assistant message for the model to complete.
         tokens.extend(self.encode_header({"role": "assistant", "content": ""}))
+        if pad:
+            assert len(tokens) < max_len
+            tokens.extend([self.tokenizer.pad_id] * (max_len - len(tokens)))
         return tokens
