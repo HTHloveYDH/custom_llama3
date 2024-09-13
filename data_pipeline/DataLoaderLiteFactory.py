@@ -4,7 +4,7 @@ from data_pipeline.SFTDataLoaderLite import SFTDataLoaderLite
 
 class DataLoaderLiteFactory:
     classname_map = {
-        True: {'json': JsonDataLoaderLite}, 
+        True: {'json': SFTDataLoaderLite}, 
         False: {
             'npy': NpyDataLoaderLite, 
             'txt': TxtDataLoaderLite, 
