@@ -56,6 +56,8 @@ class SFTDataLoaderLite:
         for dialog in dialogs:
             prompt_tokens = self.chat_format.encode_dialog_prompt(dialog[:-1], True, self.T)  # list
             batch_prompt_tokens.append(torch.tensor(prompt_tokens, dtype=torch.long))
-            output_tokens = self.tokenizer.encode(dialog[:-1]['assistant'], True, self.T)
+            output_tokens = self.tokenizer.encode(
+                dialog[:-1]['assistant'], bos=True, eos=True, pad=True, max_len=self.T
+            )
             batch_output_tokens.append(torch.tensor(output_tokens, dtype=torch.long))
         return torch.stack(batch_prompt_tokens, dim=0), torch.stack(batch_output_tokens, dim=0)
