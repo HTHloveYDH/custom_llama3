@@ -161,7 +161,7 @@ class Tokenizer:
             t.append(self.eos_id)
         if pad:
             assert len(t) < max_len
-            t.extend([self.tokenizer.pad_id] * (max_len - len(t)))
+            t.extend([self.pad_id] * (max_len - len(t)))
         return t
 
     def decode(self, t: Sequence[int]) -> str:
