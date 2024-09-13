@@ -61,6 +61,8 @@ pip install transformers==4.44.0
 
 pip install tiktoken==0.7.0
 
+pip install blobfile==3.0.0
+
 pip install tqdm==4.66.5
 ```
 
