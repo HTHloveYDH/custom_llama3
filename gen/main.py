@@ -54,7 +54,7 @@ def main():
     # _, _ = generate(model, prompt, gen_batch_size, gen_len, temperature, top_p, device=device)
     # get tokenizer
     tokenizer, chat_format = get_tokenizer(tokenizer_path)
-    generate(
+    return_messages = generate(
         model, tokenizer, chat_format, prompt, device, gen_batch_size, gen_len, dialog, 
         dp_global_rank
     )
