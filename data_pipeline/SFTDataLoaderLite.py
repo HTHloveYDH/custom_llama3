@@ -47,7 +47,8 @@ class SFTDataLoaderLite:
     def load_dialogs(self, filename:str):
         with open(filename, 'r') as f:
             json_content = json.load(f)
-        dialogs = json_content['dialogs']  # list: [[{}, {}, {}], ...]
+        # dialogs: list = [[{'role': 'system', 'content': 'xxx'}, {'role': 'user', 'content': 'xxx'}, {'role': 'assistant', 'content': 'xxx'}], ...]
+        dialogs = json_content['dialogs']
         return dialogs
     
     def load_batch_tokens(self, dialogs:list):
@@ -57,7 +58,7 @@ class SFTDataLoaderLite:
             prompt_tokens = self.chat_format.encode_dialog_prompt(dialog[:-1], True, self.T)  # list
             batch_prompt_tokens.append(torch.tensor(prompt_tokens, dtype=torch.long))
             output_tokens = self.tokenizer.encode(
-                dialog[:-1]['assistant'], bos=True, eos=True, pad=True, max_len=self.T
+                dialog[-1]['content'], bos=True, eos=True, pad=True, max_len=self.T
             )
             batch_output_tokens.append(torch.tensor(output_tokens, dtype=torch.long))
         return torch.stack(batch_prompt_tokens, dim=0), torch.stack(batch_output_tokens, dim=0)
