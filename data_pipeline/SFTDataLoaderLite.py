@@ -50,6 +50,6 @@ class SFTDataLoaderLite:
         with open(filename, 'r') as f:
             json_content = json.load(f)
         dialog = json_content['dialog']
-        tokens = self.chat_format.encode_dialog_prompt(dialog)
+        tokens = self.chat_format.encode_dialog_prompt(dialog, True, self.T)
         tensor_tokens = torch.tensor(tokens, dtype=torch.long)
         return tensor_tokens
