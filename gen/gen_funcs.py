@@ -13,7 +13,7 @@ def generate(model, tokenizer, chat_format, prompt, device:str, gen_batch_size:i
         tokens = chat_format.encode_dialog_prompt(prompt)  # python <class 'list'>
     else:
         assert isinstance(prompt, str)  # "Hello, I am a student."
-        tokens = tokenizer.encode(prompt)  # python <class 'list'>
+        tokens = tokenizer.encode(prompt, bos=True, eos=True)  # python <class 'list'>
     tokens = torch.tensor(tokens, dtype=torch.long)  # shape: (len(prompt))
     tokens = tokens.unsqueeze(0).repeat(gen_batch_size, 1)  # shape: (gen_batch_size, len(prompt))
     xgen = tokens.to(device)  # current shape: [gen_batch_size, len(prompt))
