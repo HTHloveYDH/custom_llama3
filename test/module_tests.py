@@ -102,7 +102,7 @@ def TransformerTEST(arg_map):
         print(f'[Transformer] TransformerTEST on device: {device} passed')
 
 # def DemoDataLoaderTEST(arg_map):
-#     data_loader = DemoDataLoader('./data/txt', arg_map.max_seq_len, arg_map.max_batch_size, 'full')
+#     data_loader = DemoDataLoader('./data/demo/txt', arg_map.max_seq_len, arg_map.max_batch_size, 'full')
 #     prompts = "Hello World"
 #     encoded_tokens = data_loader.encode(prompts)
 #     decoded_text = data_loader.decode(encoded_tokens)
