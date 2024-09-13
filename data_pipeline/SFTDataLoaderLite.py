@@ -34,11 +34,11 @@ class SFTDataLoaderLite:
     
     def next_batch(self):
         B, T = self.B, self.T
-        x, y = self.load_batch_tokens(self.dialogs[self.current_position:self.current_position + B + 1])
+        x, y = self.load_batch_tokens(self.dialogs[self.current_position:self.current_position + B])  # get B dialogs for current GPU
         # advance the position in the tensor
         self.current_position += B * self.num_processes
         # if loading the next batch would be out of bounds, advance to next shard
-        if self.current_position + (B * self.num_processes + 1) > len(self.dialogs):
+        if self.current_position + (B * self.num_processes) > len(self.dialogs):
             self.current_shard = (self.current_shard + 1) % len(self.shards)
             self.dialogs = self.load_dialogs(self.shards[self.current_shard])
             self.current_position = B * self.process_rank
