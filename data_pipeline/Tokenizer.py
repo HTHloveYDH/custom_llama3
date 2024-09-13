@@ -104,6 +104,8 @@ class Tokenizer:
         eos: bool,
         allowed_special: Union[Literal["all"], AbstractSet[str]] = set(),
         disallowed_special: Union[Literal["all"], Collection[str]] = (),
+        pad: bool = False, 
+        max_len: int = 2048
     ) -> List[int]:
         """
         Encodes a string into a list of token IDs.
@@ -157,6 +159,9 @@ class Tokenizer:
             t.insert(0, self.bos_id)
         if eos:
             t.append(self.eos_id)
+        if pad:
+            assert len(t) < max_len
+            t.extend([self.tokenizer.pad_id] * (max_len - len(t)))
         return t
 
     def decode(self, t: Sequence[int]) -> str:
