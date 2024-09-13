@@ -80,6 +80,9 @@ url https://pypi.nvidia.com
 pip install -r ./requirements.txt
 ```
 
+## TODO:
+1. add AWS s3 support to let several nodes read from AWS S3 bucket during multi-node training task
+
 ## some useful links:
 ### quant
 https://chatgpt.com/share/31aa8af3-dce2-457f-85db-2b18b3c242ce
