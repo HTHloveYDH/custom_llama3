@@ -4,6 +4,7 @@ from torch.nn import functional as F
 
 from config.ModelArgs import ModelArgs
 from models.modules import RMSNorm, Attention, TransformerBlock
+from models.lora import LoRAParametrization
 
 
 class Transformer(nn.Module):
