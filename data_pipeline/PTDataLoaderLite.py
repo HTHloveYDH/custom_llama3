@@ -78,7 +78,7 @@ class TxtPTDataLoaderLite(BasePTDataLoaderLite):
     def load_tokens(self, filename:str):
         with open(filename, 'r') as f:
             text = f.read()
-        tokens = self.tokenizer.encode(text)
+        tokens = self.tokenizer.encode(text, bos=True, eos=True)
         tensor_tokens = torch.tensor(tokens, dtype=torch.long)
         return tensor_tokens
 
@@ -102,6 +102,6 @@ class JsonPTDataLoaderLite(BasePTDataLoaderLite):
         with open(filename, 'r') as f:
             json_content = json.load(f)
         text = json_content['text']
-        tokens = self.tokenizer.encode(text)
+        tokens = self.tokenizer.encode(text, bos=True, eos=True)
         tensor_tokens = torch.tensor(tokens, dtype=torch.long)
         return tensor_tokens
