@@ -29,27 +29,33 @@ class SFTDataLoaderLite:
     def reset(self):
         # state, init at shard zero
         self.current_shard = 0
-        self.tokens = self.load_tokens(self.shards[self.current_shard])
-        self.current_position = self.B * self.T * self.process_rank
+        self.dialogs = self.load_dialogs(self.shards[self.current_shard])
+        self.current_position = self.B * self.process_rank
     
     def next_batch(self):
         B, T = self.B, self.T
-        buffer = self.tokens[self.current_position:self.current_position + B * T + 1]
-        x = (buffer[:-1]).view(B, T)  # inputs
-        y = (buffer[1:]).view(B, T)  # targets
+        x, y = self.load_batch_tokens(self.dialogs[self.current_position:self.current_position + B + 1])
         # advance the position in the tensor
-        self.current_position += B * T * self.num_processes
+        self.current_position += B * self.num_processes
         # if loading the next batch would be out of bounds, advance to next shard
-        if self.current_position + (B * T * self.num_processes + 1) > len(self.tokens):
+        if self.current_position + (B * self.num_processes + 1) > len(self.dialogs):
             self.current_shard = (self.current_shard + 1) % len(self.shards)
-            self.tokens = self.load_tokens(self.shards[self.current_shard])
-            self.current_position = B * T * self.process_rank
+            self.dialogs = self.load_dialogs(self.shards[self.current_shard])
+            self.current_position = B * self.process_rank
         return x, y
     
-    def load_tokens(self, filename:str):
+    def load_dialogs(self, filename:str):
         with open(filename, 'r') as f:
             json_content = json.load(f)
-        dialog = json_content['dialog']
-        tokens = self.chat_format.encode_dialog_prompt(dialog, True, self.T)
-        tensor_tokens = torch.tensor(tokens, dtype=torch.long)
-        return tensor_tokens
+        dialogs = json_content['dialogs']  # list: [[{}, {}, {}], ...]
+        return dialogs
+    
+    def load_batch_tokens(self, dialogs:list):
+        batch_prompt_tokens = []
+        batch_output_tokens = []
+        for dialog in dialogs:
+            prompt_tokens = self.chat_format.encode_dialog_prompt(dialog[:-1], True, self.T)  # list
+            batch_prompt_tokens.append(torch.tensor(prompt_tokens, dtype=torch.long))
+            output_tokens = self.tokenizer.encode(dialog[:-1]['assistant'], True, self.T)
+            batch_output_tokens.append(torch.tensor(output_tokens, dtype=torch.long))
+        return torch.stack(batch_prompt_tokens, dim=0), torch.stack(batch_output_tokens, dim=0)
