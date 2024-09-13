@@ -41,8 +41,14 @@ def generate(model, tokenizer, chat_format, prompt, device:str, gen_batch_size:i
             xcol = torch.gather(topk_indices, -1, ix) # (B, 1)
             # append to the sequence
             xgen = torch.cat((xgen, xcol), dim=1)
+    return_messages = []
     # print the generated text
     for i in range(gen_batch_size):
         tokens = xgen[i, :gen_len].tolist()
         decoded = tokenizer.decode(tokens)
         print(f'[generation text] rank {dp_global_rank} sample {i}: {decoded}')
+        if dialog:
+            return_messages.append({'generation', {'role': 'assistant', 'content': decoded}})
+        else:
+            return_messages.append({'generation': decoded})
+    return return_messages
