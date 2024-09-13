@@ -114,12 +114,43 @@ def TransformerTEST(arg_map):
 #     print(f'[DemoDataLoader] DemoDataLoaderTEST passed')
 
 def TokenizerTEST():
-    tokenizer = Tokenizer(os.path.join('.', 'tokenizer', 'tokenizer.model'))
-    tokens = tokenizer.encode("This is a test sentence.", bos=True, eos=True)
-    print(f"encode result: {tokens}")
-    text = tokenizer.decode([128000, 2028, 374, 264, 1296, 11914, 13, 128001])
-    print(f"decode result: {text}")
-    print(f'[DemoDataLoader] TokenizerTEST passed')
+    tokenizer_dir = os.path.join('.', 'tokenizer')
+    for tokenizer_file in os.listdir(tokenizer_dir):
+        tokenizer = Tokenizer(os.path.join(tokenizer_dir, tokenizer_file))
+        tokens = tokenizer.encode("This is a test sentence.", bos=True, eos=True)
+        print(f"encode result: {tokens}")
+        text = tokenizer.decode([128000, 2028, 374, 264, 1296, 11914, 13, 128001])
+        print(f"decode result: {text}")
+    print(f'[Tokenizer] TokenizerTEST passed')
+
+def ChatFormatTEST():
+    message = {
+        "role": "user",
+        "content": "This is a test sentence.",
+    }
+    dialog = [
+        {
+            "role": "system",
+            "content": "This is a test sentence.",
+        },
+        {
+            "role": "user",
+            "content": "This is a response.",
+        }
+    ]
+    tokenizer_dir = os.path.join('.', 'tokenizer')
+    for tokenizer_file in os.listdir(tokenizer_dir):
+        tokenizer = Tokenizer(os.path.join(tokenizer_dir, tokenizer_file))
+        chat_format = ChatFormat(tokenizer)
+        tokens = chat_format.encode_message(message)
+        print(f"encode message result: {tokens}")
+        text = tokenizer.decode(tokens)
+        print(f"decode result: {text}")
+        tokens = chat_format.encode_dialog_prompt(dialog)
+        print(f"encode dialog prompt: {tokens}")
+        text = tokenizer.decode(tokens)
+        print(f"decode result: {text}")
+    print(f'[ChatFormat] ChatFormatTEST passed')
 
 
 if __name__ == '__main__':
@@ -132,5 +163,6 @@ if __name__ == '__main__':
     TransformerTEST(arg_map)
     # DemoDataLoaderTEST(arg_map)
     TokenizerTEST()
+    ChatFormatTEST()
     print('\n')
     print('==================== all tests passed ====================')

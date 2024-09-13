@@ -9,7 +9,7 @@ import torch.multiprocessing as mp
 sys.path.append(os.getcwd())
 from dist.distribute import init_dist, ternimate_dist
 # from data_pipeline.demo import DemoDataLoader
-from data_pipeline.Tokenizer import Tokenizer, ChatFormat
+from data_pipeline.get_tokenizer import get_tokenizer
 from data_pipeline.DataLoaderLiteFactory import DataLoaderLiteFactory
 from models.get_model import get_model
 from train.train_funcs import train_on_epoch, valid_on_epoch, get_optimizer, resume_from_ckpt
@@ -32,6 +32,9 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
     dist_strategy = dist_config['dist_strategy']
     assert dist_strategy in ['ddp', 'fsdp', 'default'], f'distribute strategy: {dist_strategy} is not supported'
     # train configs
+    training_type = train_config['training_type']
+    assert training_type in ['pt', 'pre-train', 'sft', 'supervised-finetune'], f'training type: {training_type} is not supported'
+    dialog = True if training_type in ['sft', 'supervised-finetune'] else False
     learning_rate = train_config['learning_rate']  # defaults to 6e-4
     weight_decay = train_config['weight_decay']  # defaults to 0.1
     max_batch_size = train_config['max_batch_size']
@@ -85,7 +88,7 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
     # val_data_loader = DemoDataLoader(data_root, max_seq_len, max_batch_size, 'val')
     DataLoaderLite_factory = DataLoaderLiteFactory()
     train_data_loader = DataLoaderLite_factory.create(
-        data_format, 
+        dialog, data_format, 
         **{
             'B': max_batch_size, 'T': max_seq_len, 'process_rank': dp_global_rank, 
             'num_processes': dp_world_size, 'tokenizer_path': tokenizer_path, 
@@ -93,7 +96,7 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
         }
     )
     val_data_loader = DataLoaderLite_factory.create(
-        data_format, 
+        dialog, data_format, 
         **{
             'B': max_batch_size, 'T': max_seq_len, 'process_rank': dp_global_rank, 
             'num_processes': dp_world_size, 'tokenizer_path': tokenizer_path, 
@@ -109,7 +112,7 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
     # get optimizer
     optimizer = get_optimizer(raw_model, weight_decay, learning_rate)
     # get tokenizer
-    tokenizer = Tokenizer(tokenizer_path)
+    tokenizer, chat_format = get_tokenizer(tokenizer_path)
     # start train loop
     resume_from_ckpt(raw_model, ckpt_dir)
     for epoch in range(epochs):
@@ -127,7 +130,10 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
             #     model, "Hello, I'm a language model,", gen_batch_size, gen_len, temperature, top_p, 
             #     device
             # )
-            generate(model, tokenizer, prompt, device, gen_batch_size, gen_len, dp_global_rank)
+            generate(
+                model, tokenizer, chat_format, prompt, device, gen_batch_size, gen_len, dialog, 
+                dp_global_rank
+            )
     # terminate process group
     ternimate_dist(dist_strategy)
 

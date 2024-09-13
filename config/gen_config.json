@@ -1,4 +1,6 @@
 {
+    "dialog": false,
+
     "seed": 1337, 
     "gen_len": 32,
     "gen_batch_size": 4, 

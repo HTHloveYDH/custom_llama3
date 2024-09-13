@@ -3,10 +3,10 @@ import json
 
 import torch
 import numpy as np
-from data_pipeline.Tokenizer import Tokenizer, ChatFormat
+from data_pipeline.Tokenizer import Tokenizer
 
 
-class BaseDataLoaderLite:
+class BasePTDataLoaderLite:
     def __init__(self, B, T, process_rank:int, num_processes:int, tokenizer_path:str):
         self.B = B
         self.T = T
@@ -34,10 +34,10 @@ class BaseDataLoaderLite:
             self.current_position = B * T * self.process_rank
         return x, y
     
-    def load_tokens(self, data:str):
-        NotImplementedError(" Can not call 'load_tokens' via base class 'BaseDataLoaderLite'! ")
+    def load_tokens(self, filename:str):
+        NotImplementedError(" Can not call 'load_tokens' via base class 'BasePTDataLoaderLite'! ")
 
-class NpyDataLoaderLite(BaseDataLoaderLite):
+class NpyDataLoaderLite(BasePTDataLoaderLite):
     def __init__(self, B, T, process_rank:int, num_processes:int, tokenizer_path:str, data_root:str, \
                  master_process:bool, split:str):
         super(NpyDataLoaderLite, self).__init__(B, T, process_rank, num_processes, tokenizer_path)
@@ -59,7 +59,7 @@ class NpyDataLoaderLite(BaseDataLoaderLite):
         tensor_tokens = torch.tensor(np_tokens, dtype=torch.long)
         return tensor_tokens
 
-class TxtDataLoaderLite(BaseDataLoaderLite):
+class TxtDataLoaderLite(BasePTDataLoaderLite):
     def __init__(self, B, T, process_rank:int, num_processes:int, tokenizer_path:str, data_root:str, \
                  master_process:bool, split:str):
         super(TxtDataLoaderLite, self).__init__(B, T, process_rank, num_processes, tokenizer_path)
@@ -82,7 +82,7 @@ class TxtDataLoaderLite(BaseDataLoaderLite):
         tensor_tokens = torch.tensor(tokens, dtype=torch.long)
         return tensor_tokens
 
-class JsonDataLoaderLite(BaseDataLoaderLite):
+class JsonDataLoaderLite(BasePTDataLoaderLite):
     def __init__(self, B, T, process_rank:int, num_processes:int, tokenizer_path:str, data_root:str, \
                  master_process:bool, split:str):
         super(JsonDataLoaderLite, self).__init__(B, T, process_rank, num_processes, tokenizer_path)
