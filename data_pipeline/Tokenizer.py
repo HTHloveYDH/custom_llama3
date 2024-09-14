@@ -43,6 +43,7 @@ class Tokenizer:
     special_tokens: Dict[str, int]
 
     num_reserved_special_tokens = 256
+    # num_reserved_special_tokens = 255  # option 2#
 
     pat_str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+"  # noqa: E501
 
@@ -71,7 +72,7 @@ class Tokenizer:
         ] + [
             f"<|reserved_special_token_{i}|>"
             for i in range(5, self.num_reserved_special_tokens - 5)
-        ]
+        ]  # + ["<|pad|>"]  # option 2#
         self.special_tokens = {
             token: num_base_tokens + i for i, token in enumerate(special_tokens)
         }
@@ -87,7 +88,7 @@ class Tokenizer:
         # BOS / EOS token IDs
         self.bos_id: int = self.special_tokens["<|begin_of_text|>"]
         self.eos_id: int = self.special_tokens["<|end_of_text|>"]
-        self.pad_id: int = self.special_tokens["<|end_of_text|>"]  # -1
+        self.pad_id: int = self.special_tokens["<|end_of_text|>"]  # self.special_tokens["<|pad|>"]  # option 2#
         self.stop_tokens = {
             self.special_tokens["<|end_of_text|>"],
             self.special_tokens["<|eot_id|>"],
