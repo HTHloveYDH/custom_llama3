@@ -61,11 +61,15 @@ class Transformer(nn.Module):
 
     @classmethod
     def from_official_pretrained(cls, llama_config:dict):
-        from safetensors.torch import load_file  # pip install safetensors
+        from safetensors import safe_open  # pip install safetensors
         assert llama_config['model_type'] in ['llama3_8B', 'llama3_70B', 'llama3_405B'], f"{llama_config['model_type']} is invalid"
         model = Transformer.create_llama_model(llama_config)
-        loaded_tensors = load_file(llama_config['ckpt_path'], device='cpu')
-        model.load_state_dict(loaded_tensors)
+        state_dict = {}
+        for weight_file in llama_config['ckpt_path']:
+            with safe_open(weight_file, framework="pt", device="cpu") as f:
+                for key in f.keys():
+                    state_dict[key] = f.get_tensor(key)
+        model.load_state_dict(state_dict)
         return model
 
     @classmethod
