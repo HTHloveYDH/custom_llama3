@@ -22,11 +22,13 @@ def generate(model, tokenizer, chat_format, prompt, device:str, gen_batch_size:i
     device_type = get_device_type(device)
     sample_rng = torch.Generator(device=device)
     sample_rng.manual_seed(42 + dp_global_rank)
+    start_pos = 0
     while xgen.size(1) < gen_len:
         # forward the model to get the logits
         with torch.no_grad():
             with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
-                logits, loss = model(xcol) # (B, T, vocab_size)
+                logits, loss = model(xcol, None, start_pos) # (B, T, vocab_size)
+            start_pos += xcol.size(1)
             # take the logits at the last position
             logits = logits[:, -1, :] # (B, vocab_size)
             # get the probabilities
