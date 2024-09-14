@@ -67,8 +67,12 @@ class Transformer(nn.Module):
         assert llama_config['model_type'] in ['llama3_8B', 'llama3_70B', 'llama3_405B'], f"{llama_config['model_type']} is invalid"
         model = Transformer.create_llama_model(llama_config)
         state_dict = {}
-        weight_file = [file for file in os.listdir(llama_config['ckpt_path']) if 'safetensors' in file]
-        for weight_file in weight_file:
+        weight_files = [
+            os.path.join(llama_config['ckpt_path'], file) 
+            for file in os.listdir(llama_config['ckpt_path']) 
+            if 'safetensors' in file
+        ]
+        for weight_file in weight_files:
             # supported values for framework:'pt', 'tf', 'flax', 'numpy'
             with safe_open(weight_file, framework='pt', device='cpu') as f:
                 for key in f.keys():
