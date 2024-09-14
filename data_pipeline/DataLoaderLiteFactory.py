@@ -19,7 +19,7 @@ class DataLoaderLiteFactory:
     ]
 
     def __init__(self):
-        print('FilenameObjFactory built successfully')
+        print('DataLoaderLiteFactory built successfully')
     
     def create(self, dialog:bool, data_format:str, **kwargs):
         assert dialog in [True, False]
