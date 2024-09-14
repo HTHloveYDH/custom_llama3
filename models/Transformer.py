@@ -1,3 +1,5 @@
+import os
+
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -65,8 +67,10 @@ class Transformer(nn.Module):
         assert llama_config['model_type'] in ['llama3_8B', 'llama3_70B', 'llama3_405B'], f"{llama_config['model_type']} is invalid"
         model = Transformer.create_llama_model(llama_config)
         state_dict = {}
-        for weight_file in llama_config['ckpt_path']:
-            with safe_open(weight_file, framework="pt", device="cpu") as f:
+        weight_file = [file for file in os.listdir(llama_config['ckpt_path']) if 'safetensors' in file]
+        for weight_file in weight_file:
+            # supported values for framework:'pt', 'tf', 'flax', 'numpy'
+            with safe_open(weight_file, framework='pt', device='cpu') as f:
                 for key in f.keys():
                     state_dict[key] = f.get_tensor(key)
         model.load_state_dict(state_dict)
