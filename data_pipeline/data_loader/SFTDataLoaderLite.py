@@ -2,7 +2,7 @@ import json
 
 import torch
 
-from data_pipeline.data_loader import BaseDataLoaderLite
+from data_pipeline.data_loader.BaseDataLoaderLite import BaseDataLoaderLite
 
 
 class BaseSFTDataLoaderLite(BaseDataLoaderLite):
