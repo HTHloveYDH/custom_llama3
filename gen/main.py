@@ -34,6 +34,7 @@ def main():
     # llama3 configs
     tokenizer_path = llama3_config['tokenizer_path']
     use_compile = llama3_config['use_compile']
+    llama3_config['align'] = False
     # set up DP (distributed data parallel or fully sharded data parallel).
     # torchrun command sets the env variables RANK, LOCAL_RANK, and WORLD_SIZE
     dp = dist_strategy in ['ddp', 'fsdp']
