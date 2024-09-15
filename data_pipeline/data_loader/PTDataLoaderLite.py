@@ -1,29 +1,15 @@
-import os
-import json
-
 import torch
 import numpy as np
-from data_pipeline.Tokenizer import Tokenizer
+
+from data_pipeline.data_loader import BaseDataLoaderLite
 
 
-class BasePTDataLoaderLite:
+class BasePTDataLoaderLite(BaseDataLoaderLite):
     def __init__(self, B, T, process_rank:int, num_processes:int, tokenizer_path:str, data_root:str, \
                  master_process:bool, split:str):
-        self.B = B
-        self.T = T
-        self.process_rank = process_rank
-        self.num_processes = num_processes
-        self.tokenizer = Tokenizer(tokenizer_path)
-        assert split in {'train', 'val'}
-        # get filenames
-        files = os.listdir(data_root)  # all data files on current node
-        split_files = [file for file in files if split in file]
-        split_files = sorted(split_files)
-        split_files = [os.path.join(data_root, file) for file in split_files]
-        self.shards = split_files
-        assert len(split_files) > 0, f'no shards found for split {split}'
-        if master_process:
-            print(f'found {len(split_files)} shards for split {split}')
+        super(BasePTDataLoaderLite, self).__init__(
+            B, T, process_rank, num_processes, tokenizer_path, data_root, master_process, split
+        )
         self.reset()
 
     def reset(self):

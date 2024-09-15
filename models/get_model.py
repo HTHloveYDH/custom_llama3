@@ -13,10 +13,9 @@ from torch.distributed.fsdp.wrap import (
     enable_wrap,
     wrap,
 )
-import tiktoken
 
 from models.Transformer import Transformer as Llama
-from config.ModelArgs import ModelArgs
+from models.DPOLlama import DPOLlama
 
 
 def get_model(llama_config:dict, device, dist_strategy:str, device_ids:list):
@@ -29,6 +28,8 @@ def get_model(llama_config:dict, device, dist_strategy:str, device_ids:list):
         model = Llama.from_local_pretrained(llama_config)
     else:
         model = Llama.from_scratch(llama_config)
+    if llama_config['align']:
+        model = DPOLlama(model)
     if llama_config['lora']:
         model.init_lora(rank=llama_config['lora_rank'], alpha=llama_config['lora_alpha'])
     model.to(device)

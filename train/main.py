@@ -12,7 +12,10 @@ from dist.distribute import init_dist, ternimate_dist
 from data_pipeline.get_tokenizer import get_tokenizer
 from data_pipeline.DataLoaderLiteFactory import DataLoaderLiteFactory
 from models.get_model import get_model
-from train.train_funcs import train_on_epoch, valid_on_epoch, get_optimizer, resume_from_ckpt
+from train.train_funcs import (
+    st_train_on_epoch, st_valid_on_epoch, dpo_train_on_epoch, dpo_valid_on_epoch, 
+    get_optimizer, resume_from_ckpt
+)
 # from gen.demo import generate
 from gen.gen_funcs import generate
 from utils.load_config import load_config_from_json as load_configs
@@ -33,8 +36,9 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
     assert dist_strategy in ['ddp', 'fsdp', 'default'], f'distribute strategy: {dist_strategy} is not supported'
     # train configs
     training_type = train_config['training_type']
-    assert training_type in ['pt', 'pre-train', 'sft', 'supervised-finetune'], f'training type: {training_type} is not supported'
-    dialog = True if training_type in ['sft', 'supervised-finetune'] else False
+    assert training_type in ['pt', 'pre-train', 'sft', 'supervised-finetune', 'dpo', 'rlhf'], f'training type: {training_type} is not supported'
+    dialog = training_type in ['sft', 'supervised-finetune']
+    align = training_type in ['dpo', 'align']
     learning_rate = train_config['learning_rate']  # defaults to 6e-4
     weight_decay = train_config['weight_decay']  # defaults to 0.1
     max_batch_size = train_config['max_batch_size']
@@ -117,13 +121,24 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
     resume_from_ckpt(raw_model, ckpt_dir)
     for epoch in range(epochs):
         print(f'epoch: {epoch} / {epochs}:')
-        # train llm for one epoch
-        train_on_epoch(
-            model, train_data_loader, optimizer, device, steps_per_epoch, grad_accum_steps, epoch, 
-            log_interval, dp, master_process
-        )
-        # validate current weights on validation dataset shard of current process
-        valid_on_epoch(model, raw_model, val_data_loader, device, val_steps, epoch, dp, master_process)
+        # dpo training
+        if align:
+            # train llm for one epoch
+            dpo_train_on_epoch(
+                model, train_data_loader, optimizer, device, steps_per_epoch, grad_accum_steps, epoch, 
+                log_interval, dp, master_process
+            )
+            # validate current weights on validation dataset shard of current process
+            dpo_valid_on_epoch(model, raw_model, val_data_loader, device, val_steps, epoch, dp, master_process)
+        # supervised training
+        else:
+            # train llm for one epoch
+            st_train_on_epoch(
+                model, train_data_loader, optimizer, device, steps_per_epoch, grad_accum_steps, epoch, 
+                log_interval, dp, master_process
+            )
+            # validate current weights on validation dataset shard of current process
+            st_valid_on_epoch(model, raw_model, val_data_loader, device, val_steps, epoch, dp, master_process)
         # generate sentences to verify current weights in the master process
         if master_process:
             # _, _ = generate(

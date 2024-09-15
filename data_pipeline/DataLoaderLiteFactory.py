@@ -1,5 +1,5 @@
-from data_pipeline.PTDataLoaderLite import NpyPTDataLoaderLite, TxtPTDataLoaderLite
-from data_pipeline.SFTDataLoaderLite import InstructionSFTDataLoaderLite, DialogSFTDataLoaderLite
+from data_pipeline.data_loader.PTDataLoaderLite import NpyPTDataLoaderLite, TxtPTDataLoaderLite
+from data_pipeline.data_loader.SFTDataLoaderLite import InstructionSFTDataLoaderLite, DialogSFTDataLoaderLite
 
 
 class DataLoaderLiteFactory:
