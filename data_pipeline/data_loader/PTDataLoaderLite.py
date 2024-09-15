@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from data_pipeline.data_loader import BaseDataLoaderLite
+from data_pipeline.data_loader.BaseDataLoaderLite import BaseDataLoaderLite
 
 
 class BasePTDataLoaderLite(BaseDataLoaderLite):
