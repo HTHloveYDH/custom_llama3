@@ -13,7 +13,7 @@ from data_pipeline.get_tokenizer import get_tokenizer
 from data_pipeline.DataLoaderLiteFactory import DataLoaderLiteFactory
 from models.get_model import get_model
 from train.train_funcs import (
-    st_train_on_epoch, st_valid_on_epoch, dpo_train_on_epoch, dpo_valid_on_epoch, 
+    st_train_on_epoch, st_valid_on_epoch, dpo_train_on_epoch, dpo_valid_on_epoch,
     get_optimizer, resume_from_ckpt
 )
 # from gen.demo import generate
@@ -92,27 +92,19 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
     # train_data_loader = DemoDataLoader(data_root, max_seq_len, max_batch_size, 'train')
     # val_data_loader = DemoDataLoader(data_root, max_seq_len, max_batch_size, 'val')
     DataLoaderLite_factory = DataLoaderLiteFactory()
-    train_data_loader = DataLoaderLite_factory.create(
-        dialog, data_format, 
-        **{
-            'B': max_batch_size, 'T': max_seq_len, 'process_rank': dp_global_rank, 
-            'num_processes': dp_world_size, 'tokenizer_path': tokenizer_path, 
-            'data_root': data_root, 'master_process': master_process, 'split': 'train'
-        }
-    )
-    val_data_loader = DataLoaderLite_factory.create(
-        dialog, data_format, 
-        **{
-            'B': max_batch_size, 'T': max_seq_len, 'process_rank': dp_global_rank, 
-            'num_processes': dp_world_size, 'tokenizer_path': tokenizer_path, 
-            'data_root': data_root, 'master_process': master_process, 'split': 'val'
-        }
-    )
+    kwargs = {
+        'B': max_batch_size, 'T': max_seq_len, 'process_rank': dp_global_rank,
+        'num_processes': dp_world_size, 'tokenizer_path': tokenizer_path,
+        'data_root': data_root, 'master_process': master_process, 'split': 'train'
+    }
+    train_data_loader = DataLoaderLite_factory.create(align, dialog, data_format, **kwargs)
+    kwargs['split'] = 'val'
+    val_data_loader = DataLoaderLite_factory.create(align, dialog, data_format, **kwargs)
 
     ''' ____________________________________ build & compile model ___________________________________ '''
     device_ids = [dp_local_rank]
     model, raw_model = get_model(llama3_config, device, dist_strategy, device_ids)
-    
+
     ''' ____________________________________________ train ___________________________________________ '''
     # get optimizer
     optimizer = get_optimizer(raw_model, weight_decay, learning_rate)
@@ -126,7 +118,7 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
         if align:
             # train llm for one epoch
             dpo_train_on_epoch(
-                model, train_data_loader, optimizer, device, steps_per_epoch, grad_accum_steps, epoch, 
+                model, train_data_loader, optimizer, device, steps_per_epoch, grad_accum_steps, epoch,
                 log_interval, dp, master_process
             )
             # validate current weights on validation dataset shard of current process
@@ -135,7 +127,7 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
         else:
             # train llm for one epoch
             st_train_on_epoch(
-                model, train_data_loader, optimizer, device, steps_per_epoch, grad_accum_steps, epoch, 
+                model, train_data_loader, optimizer, device, steps_per_epoch, grad_accum_steps, epoch,
                 log_interval, dp, master_process
             )
             # validate current weights on validation dataset shard of current process
@@ -143,11 +135,11 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
         # generate sentences to verify current weights in the master process
         if master_process:
             # _, _ = generate(
-            #     model, "Hello, I'm a language model,", gen_batch_size, gen_len, temperature, top_p, 
+            #     model, "Hello, I'm a language model,", gen_batch_size, gen_len, temperature, top_p,
             #     device
             # )
             return_messages = generate(
-                model, tokenizer, chat_format, prompt, device, gen_batch_size, gen_len, dialog, 
+                model, tokenizer, chat_format, prompt, device, gen_batch_size, gen_len, dialog,
                 dp_global_rank
             )
     # terminate process group
