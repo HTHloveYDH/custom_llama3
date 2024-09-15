@@ -82,7 +82,8 @@ def dpo_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoc
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
             winner_values, winner_logits = model(x_winner, None)
             loser_values, loser_logits = model(x_loser, None)
-        # TODO: compute loss
+        # compute dpo loss
+        # loss = dpo_loss(winner_values.mean(dim=-1), loser_values.mean(dim=-1))
         loss = dpo_loss(winner_values[:, -1], loser_values[:, -1])
         loss_accum = loss.detach()
         loss.backward()
@@ -115,6 +116,7 @@ def dpo_valid_on_epoch(model, raw_model, data_loader, device:str, val_steps:int,
             winner_values, winner_logits = model(x_winner, None)
             loser_values, loser_logits = model(x_loser, None)
         # compute dpo loss
+        # loss = dpo_loss(winner_values.mean(dim=-1), loser_values.mean(dim=-1))
         loss = dpo_loss(winner_values[:, -1], loser_values[:, -1])
         loss = loss / val_steps
         val_loss_accum += loss.detach()
