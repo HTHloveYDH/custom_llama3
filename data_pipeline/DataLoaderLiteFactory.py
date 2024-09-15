@@ -1,32 +1,42 @@
 from data_pipeline.data_loader.PTDataLoaderLite import NpyPTDataLoaderLite, TxtPTDataLoaderLite
 from data_pipeline.data_loader.SFTDataLoaderLite import InstructionSFTDataLoaderLite, DialogSFTDataLoaderLite
+from data_pipeline.data_loader.DPODataLoaderLite import BaseDPODataLoaderLite
 
 
 class DataLoaderLiteFactory:
     classname_map = {
         True: {
-            'instruction': InstructionSFTDataLoaderLite, 
-            'dialog': DialogSFTDataLoaderLite
-        }, 
+            'naive': BaseDPODataLoaderLite
+        },
         False: {
-            'npy': NpyPTDataLoaderLite, 
-            'txt': TxtPTDataLoaderLite, 
+            True: {
+                'instruction': InstructionSFTDataLoaderLite,
+                'dialog': DialogSFTDataLoaderLite
+            },
+            False: {
+                'npy': NpyPTDataLoaderLite,
+                'txt': TxtPTDataLoaderLite
+            }
         }
     }
     valid_classname_list = [
-        'NpyPTDataLoaderLite', 
-        'TxtPTDataLoaderLite', 
-        'InstructionSFTDataLoaderLite', 
-        'DialogSFTDataLoaderLite'
+        'NpyPTDataLoaderLite',
+        'TxtPTDataLoaderLite',
+        'InstructionSFTDataLoaderLite',
+        'DialogSFTDataLoaderLite',
+        'BaseDPODataLoaderLite'
     ]
 
     def __init__(self):
         print('DataLoaderLiteFactory built successfully')
-    
-    def create(self, dialog:bool, data_format:str, **kwargs):
+
+    def create(self, align:bool, dialog:bool, data_format:str, **kwargs):
         assert dialog in [True, False]
-        assert data_format in ['npy', 'txt', 'instruction', 'dialog']
-        classname = DataLoaderLiteFactory.classname_map[dialog][data_format]
+        assert data_format in ['npy', 'txt', 'instruction', 'dialog', 'naive']
+        if align:
+            classname = DataLoaderLiteFactory.classname_map[align][data_format]
+            return classname(**kwargs)
+        classname = DataLoaderLiteFactory.classname_map[align][dialog][data_format]
         return classname(**kwargs)
 
     def create_v2(self, classname:str, **kwargs):
