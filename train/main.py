@@ -110,28 +110,21 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
     optimizer = get_optimizer(raw_model, weight_decay, learning_rate)
     # get tokenizer
     tokenizer, chat_format = get_tokenizer(tokenizer_path)
+    # get functions
+    train_on_epoch, valid_on_epoch = st_train_on_epoch, st_valid_on_epoch  # supervised training
+    if align:
+        train_on_epoch, valid_on_epoch = dpo_train_on_epoch, dpo_valid_on_epoch  # dpo training
     # start train loop
     resume_from_ckpt(raw_model, ckpt_dir)
     for epoch in range(epochs):
         print(f'epoch: {epoch} / {epochs}:')
-        # dpo training
-        if align:
-            # train llm for one epoch
-            dpo_train_on_epoch(
-                model, train_data_loader, optimizer, device, steps_per_epoch, grad_accum_steps, epoch,
-                log_interval, dp, master_process
-            )
-            # validate current weights on validation dataset shard of current process
-            dpo_valid_on_epoch(model, raw_model, val_data_loader, device, val_steps, epoch, dp, master_process)
-        # supervised training
-        else:
-            # train llm for one epoch
-            st_train_on_epoch(
-                model, train_data_loader, optimizer, device, steps_per_epoch, grad_accum_steps, epoch,
-                log_interval, dp, master_process
-            )
-            # validate current weights on validation dataset shard of current process
-            st_valid_on_epoch(model, raw_model, val_data_loader, device, val_steps, epoch, dp, master_process)
+        # train llm for one epoch
+        train_on_epoch(
+            model, train_data_loader, optimizer, device, steps_per_epoch, grad_accum_steps, epoch,
+            log_interval, dp, master_process
+        )
+        # validate current weights on validation dataset shard of current process
+        valid_on_epoch(model, raw_model, val_data_loader, device, val_steps, epoch, dp, master_process)
         # generate sentences to verify current weights in the master process
         if master_process:
             # _, _ = generate(
