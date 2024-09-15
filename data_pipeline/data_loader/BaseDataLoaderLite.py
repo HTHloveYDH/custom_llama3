@@ -3,7 +3,7 @@ import os
 from data_pipeline.Tokenizer import Tokenizer, ChatFormat
 
 
-class BaseSFTDataLoaderLite:
+class BaseDataLoaderLite:
     def __init__(self, B, T, process_rank:int, num_processes:int, tokenizer_path:str, data_root:str, \
                  master_process:bool, split:str):
         self.B = B
