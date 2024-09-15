@@ -1,21 +1,23 @@
-from data_pipeline.PTDataLoaderLite import NpyPTDataLoaderLite, TxtPTDataLoaderLite, JsonPTDataLoaderLite
-from data_pipeline.SFTDataLoaderLite import SFTDataLoaderLite
+from data_pipeline.PTDataLoaderLite import NpyPTDataLoaderLite, TxtPTDataLoaderLite
+from data_pipeline.SFTDataLoaderLite import InstructionSFTDataLoaderLite, DialogSFTDataLoaderLite
 
 
 class DataLoaderLiteFactory:
     classname_map = {
-        True: {'json': SFTDataLoaderLite}, 
+        True: {
+            'instruction': InstructionSFTDataLoaderLite, 
+            'dialog': DialogSFTDataLoaderLite
+        }, 
         False: {
             'npy': NpyPTDataLoaderLite, 
             'txt': TxtPTDataLoaderLite, 
-            'json': JsonPTDataLoaderLite
         }
     }
     valid_classname_list = [
         'NpyPTDataLoaderLite', 
         'TxtPTDataLoaderLite', 
-        'JsonPTDataLoaderLite', 
-        'SFTDataLoaderLite'
+        'InstructionSFTDataLoaderLite', 
+        'DialogSFTDataLoaderLite'
     ]
 
     def __init__(self):
@@ -23,7 +25,7 @@ class DataLoaderLiteFactory:
     
     def create(self, dialog:bool, data_format:str, **kwargs):
         assert dialog in [True, False]
-        assert data_format in ['npy', 'txt', 'json']
+        assert data_format in ['npy', 'txt', 'instruction', 'dialog']
         classname = DataLoaderLiteFactory.classname_map[dialog][data_format]
         return classname(**kwargs)
 

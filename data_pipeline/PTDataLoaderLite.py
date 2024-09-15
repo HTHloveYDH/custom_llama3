@@ -81,27 +81,3 @@ class TxtPTDataLoaderLite(BasePTDataLoaderLite):
         tokens = self.tokenizer.encode(text, bos=True, eos=True)
         tensor_tokens = torch.tensor(tokens, dtype=torch.long)
         return tensor_tokens
-
-class JsonPTDataLoaderLite(BasePTDataLoaderLite):
-    def __init__(self, B, T, process_rank:int, num_processes:int, tokenizer_path:str, data_root:str, \
-                 master_process:bool, split:str):
-        super(JsonPTDataLoaderLite, self).__init__(B, T, process_rank, num_processes, tokenizer_path)
-        assert split in {'train', 'val'}
-        # get filenames
-        files = os.listdir(data_root)  # all data files on current node
-        split_files = [file for file in files if split in file]
-        split_files = sorted(split_files)
-        split_files = [os.path.join(data_root, file) for file in split_files]
-        self.shards = split_files
-        assert len(split_files) > 0, f'no shards found for split {split}'
-        if master_process:
-            print(f'found {len(split_files)} shards for split {split}')
-        self.reset()
-
-    def load_tokens(self, filename:str):
-        with open(filename, 'r') as f:
-            json_content = json.load(f)
-        text = json_content['text']
-        tokens = self.tokenizer.encode(text, bos=True, eos=True)
-        tensor_tokens = torch.tensor(tokens, dtype=torch.long)
-        return tensor_tokens
