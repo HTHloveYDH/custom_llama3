@@ -23,7 +23,7 @@ class RoPE:
     def reshape_for_broadcast(freqs_cis, x):
         ndim = x.ndim
         assert 0 <= 1 < ndim
-        assert freqs_cis.shape == (x.shape[1],x.shape[-1]), "freqs_cis的最后两个维度必须与x匹配"
+        assert freqs_cis.shape == (x.shape[1], x.shape[-1]), 'Last two dimensions of freqs_cis need to be compatible with x.'
         shape = [d if i == 1 or i == ndim - 1 else 1 for i, d in enumerate(x.shape)]
         return freqs_cis.view(*shape)
 
@@ -94,7 +94,7 @@ class Attention(nn.Module):
             # shape: [bsz, seq_len, n_heads, head_dim]
             values = Attention.repeat_kv(xv, self.n_rep)
             # compute causal mask in training mode
-            mask = torch.full((seq_len, seq_len), float("-inf"), device=x.device)
+            mask = torch.full((seq_len, seq_len), float('-inf'), device=x.device)
             mask = torch.triu(mask, diagonal=1).to(x)
         # inference mode: with kv-cache
         else:
