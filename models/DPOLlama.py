@@ -13,3 +13,13 @@ class DPOLlama(nn.Module):
         if not self.training:
             return logits
         return values, logits
+
+    def train(self, mode: bool = True):
+        self.training = True
+        self.llm.train(mode)
+        self.value_head.train(mode)
+
+    def eval(self):
+        self.training = False
+        self.llm.eval()
+        self.value_head.eval()
