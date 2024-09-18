@@ -25,7 +25,7 @@ def main():
     gen_batch_size = gen_config['gen_batch_size']
     gen_len = gen_config['gen_len']
     if llama3_config['model_type'] in ['llama3_8B', 'llama3_70B', 'llama3_405B']:
-        assert gen_batch_size == 2048
+        assert gen_batch_size == 32
     else:
         assert gen_batch_size == llama3_config['params']['max_batch_size']
     temperature = gen_config['temperature']
