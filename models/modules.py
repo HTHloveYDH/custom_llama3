@@ -29,13 +29,13 @@ class RoPE:
 
     @staticmethod
     def apply_rotary_emb(xq: torch.Tensor, xk: torch.Tensor, freqs_cis: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        xq_ = torch.view_as_complex(xq.float().reshape(*xq.shape[:-1], -1, 2))    #xq_:[bsz, seq_len, n_heads, head_dim / 2]
-        xk_ = torch.view_as_complex(xk.float().reshape(*xk.shape[:-1], -1, 2))    #xk_:[bsz, seq_len, n_heads, head_dim / 2]
+        xq_ = torch.view_as_complex(xq.float().reshape(*xq.shape[:-1], -1, 2))  # xq_ shape: [bsz, seq_len, n_heads, head_dim / 2]
+        xk_ = torch.view_as_complex(xk.float().reshape(*xk.shape[:-1], -1, 2))  # xk_ shape: [bsz, seq_len, n_heads, head_dim / 2]
 
         freqs_cis = RoPE.reshape_for_broadcast(freqs_cis, xq_)
 
-        xq_out = torch.view_as_real(xq_ * freqs_cis).flatten(3)  # xq_out: [bsz, seq_len, n_heads, head_dim]
-        xk_out = torch.view_as_real(xk_ * freqs_cis).flatten(3)  # xk_out: [bsz, seq_len, n_heads, head_dim]
+        xq_out = torch.view_as_real(xq_ * freqs_cis).flatten(3)  # xq_out shape: [bsz, seq_len, n_heads, head_dim]
+        xk_out = torch.view_as_real(xk_ * freqs_cis).flatten(3)  # xk_out shape: [bsz, seq_len, n_heads, head_dim]
         return xq_out.type_as(xq), xk_out.type_as(xk)
 
 class RMSNorm(nn.Module):
