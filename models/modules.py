@@ -101,7 +101,9 @@ class Attention(nn.Module):
             freqs_cis = RoPE.precompute_freqs_cis(
                 self.head_dim, self.args.max_seq_len * 2, self.args.rope_theta, x.device
             )
-            freqs_cis = freqs_cis[start_pos : start_pos + seq_len]
+            # freqs_cis = freqs_cis[start_pos:start_pos + seq_len]
+            start_pos_ = start_pos % (self.args.max_seq_len * 2)
+            freqs_cis = freqs_cis[start_pos_:start_pos_ + seq_len]
             # apply RoPE to query (xq) and value (xv)
             xq, xk = RoPE.apply_rotary_emb(xq, xk, freqs_cis)
             # shift cache_k, cache_v if necessary
