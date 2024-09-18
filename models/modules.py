@@ -11,7 +11,7 @@ from config.ModelArgs import ModelArgs
 class RoPE:
     @staticmethod
     def precompute_freqs_cis(dim:int, seq_len: int, theta: float=10000.0, device='cpu'):
-        freqs = 1.0 / (theta** (torch.arange(0, dim, 2, device=device)[:(dim//2)].float()/dim))
+        freqs = 1.0 / (theta ** (torch.arange(0, dim, 2, device=device)[:(dim // 2)].float() / dim))
         t = torch.arange(seq_len, dtype=torch.float32, device=device)
         freqs = torch.outer(t, freqs).to(device)
         # The rotation matrix needs to be converted to polar form in order to
