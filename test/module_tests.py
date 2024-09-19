@@ -7,7 +7,7 @@ import torch.nn as nn
 sys.path.append(os.getcwd())
 from data_pipeline.Tokenizer import Tokenizer, ChatFormat
 from config.ModelArgs import ModelArgs
-from models.modules import RoPE, RMSNorm, Attention, FeedForward, TransformerBlock
+from models.modules import RoPE, RMSNorm, Attention, InfiniteAttention, FeedForward, TransformerBlock
 from models.Transformer import Transformer
 # from data_pipeline.demo import DemoDataLoader
 
@@ -68,6 +68,27 @@ def AttentionTEST(arg_map):
         x_out = attention(x_norm, start_pos=0)
         print(f'[Attention] x_out.shape: {x_out.shape}')
         print(f'[Attention] AttentionTEST on device: {device} passed')
+
+def InfiniteAttentionTEST(arg_map):
+    for device in ['cpu', 'cuda:0']:
+        head_dim = arg_map.dim // arg_map.n_heads
+        x_norm = torch.randn(
+            (arg_map.max_batch_size, arg_map.max_seq_len, arg_map.dim),
+            device=device
+        )
+        xk = torch.randn(
+            (arg_map.max_batch_size, arg_map.max_seq_len, arg_map.n_kv_heads, head_dim),
+            device=device
+        )
+        n_rep = arg_map.n_heads // arg_map.n_kv_heads
+        keys = InfiniteAttention.repeat_kv(xk, n_rep)
+        print(f'xk.shape: {xk.shape}')
+        print(f'keys.shape: {keys.shape}')
+        attention = InfiniteAttention(arg_map)
+        attention.to(device)
+        x_out = attention(x_norm, start_pos=0)
+        print(f'[InfiniteAttention] x_out.shape: {x_out.shape}')
+        print(f'[InfiniteAttention] InfiniteAttentionTEST on device: {device} passed')
 
 def FeedForwardTEST(arg_map):
     for device in ['cpu', 'cuda:0']:

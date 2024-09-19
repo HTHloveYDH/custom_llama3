@@ -169,7 +169,7 @@ class Attention(nn.Module):
         self.cache_k[:, :-1, :, :] = self.cache_k[:, 1:, :, :]
         self.cache_v[:, :-1, :, :] = self.cache_v[:, 1:, :, :]
 
-class InfiniAttention(Attention):
+class InfiniteAttention(Attention):
     def __init__(self, args: ModelArgs):
         super().__init__(args)
         self.args = args
@@ -303,7 +303,7 @@ class TransformerBlock(nn.Module):
         self.args = args
         self.attention_norm = RMSNorm(dim=args.dim, eps=args.norm_eps)
         if args.long_term_memory:
-            self.attention = InfiniAttention(args)
+            self.attention = InfiniteAttention(args)
         else:
             self.attention = Attention(args)
         self.ff_norm = RMSNorm(dim=args.dim, eps=args.norm_eps)
