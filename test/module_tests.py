@@ -179,6 +179,7 @@ if __name__ == '__main__':
     RoPETEST(arg_map)
     RMSNormTEST(arg_map)
     AttentionTEST(arg_map)
+    InfiniteAttentionTEST(arg_map)
     FeedForwardTEST(arg_map)
     TransformerBlockTEST(arg_map)
     TransformerTEST(arg_map)
