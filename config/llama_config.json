@@ -22,6 +22,7 @@
         "norm_eps": 1e-5, 
         "rope_theta": 500000.0, 
         "max_batch_size": 4, 
-        "max_seq_len": 1024
+        "max_seq_len": 1024, 
+        "long_term_memory": false
     }
 }

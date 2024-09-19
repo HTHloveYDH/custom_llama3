@@ -15,3 +15,5 @@ class ModelArgs:
 
     max_batch_size: int = 10          # max batch size  
     max_seq_len: int = 256            # max seqence length  
+
+    long_term_memory: bool = False
