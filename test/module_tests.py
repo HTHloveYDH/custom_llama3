@@ -87,6 +87,7 @@ def InfiniteAttentionTEST(arg_map):
         attention = InfiniteAttention(arg_map)
         attention.to(device)
         x_out = attention(x_norm, start_pos=0)
+        attention.reset_memory()
         print(f'[InfiniteAttention] x_out.shape: {x_out.shape}')
         print(f'[InfiniteAttention] InfiniteAttentionTEST on device: {device} passed')
 
