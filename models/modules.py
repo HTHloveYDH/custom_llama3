@@ -183,9 +183,13 @@ class InfiniteAttention(Attention):
         self.wv = nn.Linear(self.dim, self.n_kv_heads * self.head_dim, bias=False)
         self.wo = nn.Linear(self.n_heads * self.head_dim, self.dim, bias=False)
 
-        self.beta = nn.Parameter(torch.randn(1))
-        self.register_buffer('M', torch.zeros(self.n_heads, self.head_dim, self.head_dim))
-        self.register_buffer('z', torch.zeros(self.n_heads, self.head_dim))
+        self.beta = nn.Parameter(torch.randn(1, self.n_heads, 1, 1))
+        self.register_buffer(
+            'M', torch.zeros(self.args.max_batch_size, self.n_heads, self.head_dim, self.head_dim)
+        )
+        self.register_buffer(
+            'z', torch.zeros(self.args.max_batch_size, self.n_heads, self.head_dim, 1)
+        )
 
     def forward(self, x: torch.Tensor, start_pos):
         # x shape: [bsz, seq_len, dim]
@@ -235,41 +239,41 @@ class InfiniteAttention(Attention):
             self.cache_v[:bsz, start_pos:start_pos + seq_len] = xv
             keys = self.cache_k[:bsz, :start_pos + seq_len]
             values = self.cache_v[:bsz, :start_pos + seq_len]
-            keys = InfiniAttention.repeat_kv(keys, self.n_rep)  # keys shape: [bsz, seq_len, n_heads, head_dim]
-            values = InfiniAttention.repeat_kv(values, self.n_rep)  # values shape: [bsz, seq_len, n_heads, head_dim]
-        # GQA
-        # Memory retrieval and attention calculation per segment
-        retrieved_memory = self._retrieve_from_memory(xq, self.M, self.z)
-        # Update memory with current segment's key and value states
-        self.M, self.z  = self._update_memory(xk, xv, self.M, self.z)
+            keys = InfiniteAttention.repeat_kv(keys, self.n_rep)  # keys shape: [bsz, seq_len, n_heads, head_dim]
+            values = InfiniteAttention.repeat_kv(values, self.n_rep)  # values shape: [bsz, seq_len, n_heads, head_dim]
         # compute attention score matrix
         xq = xq.transpose(1, 2)  # xq shape: [bsz, n_heads, seq_len, head_dim]
-        keys = keys.transpose(1, 2)  # keys shape: [bsz, n_heads,seq_len, head_dim]
+        keys = keys.transpose(1, 2)  # keys shape: [bsz, n_heads, seq_len, head_dim]
         values = values.transpose(1, 2)  # values shape: [bsz, n_heads, seq_len, head_dim]
         # normal attention
         output = self._normal_scaled_dot_product_attention(xq, keys, values, mask)  # output shape: [bsz, n_heads, seq_len, head_dim]
         # # flash attention (more efficient)
         # output = F.scaled_dot_product_attention(xq, keys, values, attn_mask=mask)  # output shape: [bsz, n_heads, seq_len, head_dim]
+        # Memory retrieval and attention calculation per segment
+        # retrieve memory
+        retrieved_memory = self._retrieve_from_memory(xq, self.M, self.z)
+        # Update memory with current segment's key and value states
+        self.M, self.z  = self._update_memory(keys, values, self.M, self.z)
         output = self._long_term_mem_injection(output, retrieved_memory)
-        # shape: [bsz, n_heads, seq_len, head_dim] -> [bsz, seq_len, n_heads,head_dim] -> [bsz, seq_len, n_heads * head_dim]
+        # shape: [bsz, n_heads, seq_len, head_dim] -> [bsz, seq_len, n_heads, head_dim] -> [bsz, seq_len, n_heads * head_dim]
         output = output.transpose(1, 2).contiguous().view(bsz, seq_len, -1)
         return self.wo(output)  # shape: [bsz, seq_len, dim]
 
-    def _retrieve_from_memory(self, xq, M, z):
+    def _retrieve_from_memory(self, q, M, z):
         # Retrieve context from compressive memory using linear attention (Eq. 3)
-        M_s_1 = torch.matmul(F.elu(xq) + 1, M)
-        Z_s_1 = torch.matmul(F.elu(xq) + 1, z.unsqueeze(-1)) + 1e-8
-        A_mem = M_s_1 / Z_s_1
+        M_s_1 = torch.matmul(F.elu(q) + 1, M)  # shape: [bsz, n_heads, seq_len, head_dim]
+        Z_s_1 = torch.matmul(F.elu(q) + 1, z) + 1e-8  # shape: [bsz, n_heads, seq_len, 1]
+        A_mem = M_s_1 / Z_s_1  # shape: [bsz, n_heads, seq_len, head_dim]
         return A_mem
 
-    def _update_memory(self, xk, xv, M, z, use_delta=False):
+    def _update_memory(self, k, v, M, z, use_delta=False):
         if use_delta:
-            retrieved_v = torch.matmul(F.elu(xk) + 1, M) / \
-                (torch.matmul(F.elu(xk) + 1, z.unsqueeze(-1)) + 1e-8)
-            M = M + torch.matmul(F.elu(xk).transpose(-2, -1) + 1, xv - retrieved_v)
+            retrieved_v = torch.matmul(F.elu(k) + 1, M) / \
+                (torch.matmul(F.elu(k) + 1, z.unsqueeze(-1)) + 1e-8)
+            M = M + torch.matmul(F.elu(k).transpose(-2, -1) + 1, v - retrieved_v)
         else:
-            M = M + torch.matmul(F.elu(xk).transpose(-2, -1) + 1, xv)
-        z = z + (F.elu(xk) + 1).sum(dim=-2)
+            M = M + torch.matmul(F.elu(k).transpose(-2, -1) + 1, v)
+        z = z + (F.elu(k) + 1).sum(dim=-2, keepdim=True).transpose(-2, -1)
         return M, z
 
     def _long_term_mem_injection(self, output, retrieved_memory):
