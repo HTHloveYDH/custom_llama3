@@ -18,9 +18,8 @@ def main():
     llama3_config, gen_config, cloud_config, dist_config = load_configs('gen')
     # distribute configs
     dist_type = dist_config['dist_type']
-    assert dist_type in ['ddp', 'fsdp', 'default'], f'distribute strategy: {dist_type} is not supported'
-    dp = dist_type in ['ddp', 'fsdp', 'fsdp+tp']
-    tp = dist_type in ['fsdp+tp', 'tp']
+    assert dist_type in ['tp', 'default'], f'distribute strategy: {dist_type} is not supported'
+    tp = dist_type == 'tp'
     dp_size = dist_config['data_parallel_size']
     tp_size = dist_config['tensor_parallel_size']
     # generation configs
