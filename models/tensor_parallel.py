@@ -8,8 +8,29 @@ from torch.distributed.tensor.parallel import (
 )
 
 
-def TP(model, tp_mesh):
+def TP(model, dp_mesh, tp_mesh):
     # parallelize the first embedding and the last linear out projection
+    if dp_mesh is None:
+        layer_tp_plan = {
+            'tok_embeddings': RowwiseParallel(),
+            'norm': SequenceParallel(),
+            'output': ColwiseParallel(
+                input_layouts=Shard(1),
+                output_layouts=Replicate()
+            ),
+        }
+    else:
+        layer_tp_plan = {
+            'tok_embeddings': RowwiseParallel(
+                input_layouts=Replicate(),
+                output_layouts=Shard(1),
+            ),
+            'norm': SequenceParallel(),
+            'output': ColwiseParallel(
+                input_layouts=Shard(1),
+                output_layouts=Replicate()
+            ),
+        }
     model = parallelize_module(
         model,
         tp_mesh,

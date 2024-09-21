@@ -35,7 +35,6 @@ def main(dp_local_rank=0, torch_mp_launch=False):
     dist_type = dist_config['dist_type']
     assert dist_type in ['ddp', 'fsdp', 'fsdp+tp', 'tp', 'default'], f'distribute strategy: {dist_type} is not supported'
     dp = dist_type in ['ddp', 'fsdp', 'fsdp+tp']
-    tp = dist_type in ['fsdp+tp', 'tp']
     dp_size = dist_config['data_parallel_size']
     tp_size = dist_config['tensor_parallel_size']
     # train configs
@@ -105,7 +104,7 @@ def main(dp_local_rank=0, torch_mp_launch=False):
     val_data_loader = DataLoaderLite_factory.create(align, dialog, data_format, **kwargs)
 
     ''' ____________________________________ build & compile model ___________________________________ '''
-    model, raw_model = get_model(llama3_config, device, dist_type, tp, device_mesh)
+    model, raw_model = get_model(llama3_config, device, dist_type, device_mesh)
 
     ''' ____________________________________________ train ___________________________________________ '''
     # get optimizer

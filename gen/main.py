@@ -19,7 +19,6 @@ def main():
     # distribute configs
     dist_type = dist_config['dist_type']
     assert dist_type in ['tp', 'default'], f'distribute strategy: {dist_type} is not supported'
-    tp = dist_type == 'tp'
     dp_size = dist_config['data_parallel_size']
     tp_size = dist_config['tensor_parallel_size']
     # generation configs
@@ -50,7 +49,7 @@ def main():
     torch.set_float32_matmul_precision('high')
 
     ''' ____________________________________ build & compile model ___________________________________ '''
-    model, raw_model = get_model(llama3_config, device, dist_type, tp, device_mesh)
+    model, raw_model = get_model(llama3_config, device, dist_type, device_mesh)
 
     ''' ____________________________________________ test ___________________________________________ '''
     # _, _ = generate(model, prompt, gen_batch_size, gen_len, temperature, top_p, device=device)

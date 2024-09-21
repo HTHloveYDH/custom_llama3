@@ -19,7 +19,7 @@ from models.DPOLlama import DPOLlama
 from models.tensor_parallel import TP
 
 
-def get_model(llama_config:dict, device, dist_type:str, tp:bool, device_mesh:dict):
+def get_model(llama_config:dict, device, dist_type:str, device_mesh:dict):
     assert llama_config['load_weights'] in ['official', 'local', None], f"load weights: {llama_config['load_weights']}  is not supported"
     # create model
     if llama_config['load_weights'] == 'official':
@@ -38,10 +38,10 @@ def get_model(llama_config:dict, device, dist_type:str, tp:bool, device_mesh:dic
     if use_compile:
         model = torch.compile(model)
     # tensor parallelism
-    if tp:
-        tp_mesh = device_mesh['tp']
-        dp_mesh = device_mesh['dp']  # update data parallel mesh
-        model = TP(model, tp_mesh)
+    tp_mesh = None if device_mesh is None or device_mesh['tp'].size() == 1 else device_mesh['tp']
+    dp_mesh = None if device_mesh is None or device_mesh['dp'].size() == 1 else device_mesh['dp']
+    if tp_mesh is not None:
+        model = TP(model, dp_mesh, tp_mesh)
     else:
         dp_mesh = None
     # data parallelism
