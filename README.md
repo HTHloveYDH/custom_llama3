@@ -33,6 +33,11 @@ torchrun --nproc_per_node=8 --nnodes=2 -node_rank=1 --rdzv_backend=c10d --rdzv_e
 python gen/main.py
 ```
 
+## lanuch generation task with tensor parallelism:
+```bash
+torchrun --standalone --nproc_per_node=2 gen/main.py
+```
+
 ## lanuch test code:
 ```bash
 python test/module_tests.py
