@@ -22,7 +22,7 @@ from utils.load_config import load_config_from_json as load_configs
 from utils.logger import Logger
 
 
-def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
+def main(dp_local_rank=0, torch_mp_launch=False):
     ''' __________________________________________ setup _____________________________________________ '''
     # create the log directory we will write checkpoints to and log to
     log_dir = 'log'
@@ -32,8 +32,10 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
     # load configs
     llama3_config, train_config, data_config, cloud_config, dist_config = load_configs('train')
     # distribute configs
-    dist_strategy = dist_config['dist_strategy']
-    assert dist_strategy in ['ddp', 'fsdp', 'default'], f'distribute strategy: {dist_strategy} is not supported'
+    dp_strategy = dist_config['dp_strategy']
+    assert dp_strategy in ['ddp', 'fsdp', 'default'], f'distribute strategy: {dp_strategy} is not supported'
+    dp_size = dist_config['data_parallel_size']
+    tp_size = dist_config['tensor_parallel_size']
     # train configs
     training_type = train_config['training_type']
     assert training_type in ['pt', 'pre-train', 'sft', 'supervised-finetune', 'dpo', 'rlhf'], f'training type: {training_type} is not supported'
@@ -72,16 +74,16 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
     llama3_config['align'] = align
     # set up DP (distributed data parallel or fully sharded data parallel) process group.
     # torchrun command sets the env variables RANK, LOCAL_RANK, and WORLD_SIZE
-    dp = dist_strategy in ['ddp', 'fsdp']
-    dp_global_rank, dp_local_rank, dp_world_size, master_process, device, _ = init_dist(
-        dist_strategy, torch_mp_launch, dp_local_rank, dp_world_size
+    dp = dp_strategy in ['ddp', 'fsdp']
+    dp_global_rank, dp_local_rank, device_mesh, master_process, device, _ = init_dist(
+        dp_strategy, dp_size, tp_size, torch_mp_launch, dp_local_rank
     )
     # set random seed
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
-    assert total_token_num % (max_batch_size * max_seq_len * dp_world_size) == 0, 'make sure total_token_num is divisible by B * T * dp_world_size'
-    steps_per_epoch = total_token_num // (max_batch_size * max_seq_len * dp_world_size)
+    assert total_token_num % (max_batch_size * max_seq_len * dp_size) == 0, 'make sure total_token_num is divisible by B * T * dp_size'
+    steps_per_epoch = total_token_num // (max_batch_size * max_seq_len * dp_size)
     assert steps_per_epoch % grad_accum_steps == 0, 'make sure steps_per_epoch is divisible by grad_accum_steps'
     if master_process:
         print(f'total desired batch size: {total_token_num}')
@@ -94,7 +96,7 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
     DataLoaderLite_factory = DataLoaderLiteFactory()
     kwargs = {
         'B': max_batch_size, 'T': max_seq_len, 'process_rank': dp_global_rank,
-        'num_processes': dp_world_size, 'tokenizer_path': tokenizer_path,
+        'num_processes': dp_size, 'tokenizer_path': tokenizer_path,
         'data_root': data_root, 'master_process': master_process, 'split': 'train'
     }
     train_data_loader = DataLoaderLite_factory.create(align, dialog, data_format, **kwargs)
@@ -102,8 +104,7 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
     val_data_loader = DataLoaderLite_factory.create(align, dialog, data_format, **kwargs)
 
     ''' ____________________________________ build & compile model ___________________________________ '''
-    device_ids = [dp_local_rank]
-    model, raw_model = get_model(llama3_config, device, dist_strategy, device_ids)
+    model, raw_model = get_model(llama3_config, device, dp_strategy, dp_local_rank, device_mesh)
 
     ''' ____________________________________________ train ___________________________________________ '''
     # get optimizer
@@ -136,17 +137,17 @@ def main(dp_local_rank=0, dp_world_size=1, torch_mp_launch=False):
                 dp_global_rank
             )
     # terminate process group
-    ternimate_dist(dist_strategy)
+    ternimate_dist(dp_strategy)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='simple distributed training job')
-    parser.add_argument('--dp_world_size', type=int, help='Total processes to train the model')
+    parser.add_argument('--world_size', type=int, default=None, help='Total processes to train the model')
     parser.add_argument('--torch_mp_launch', action='store_true')
     args = parser.parse_args()
     # launch by torch.multiprocessing
     if args.torch_mp_launch:
-        mp.spawn(main, args=(args.dp_world_size, args.torch_mp_launch), nprocs=args.dp_world_size)
+        mp.spawn(main, args=(args.torch_mp_launch,), nprocs=args.world_size)
     # launch by torchrun or python
     else:
         main()

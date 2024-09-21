@@ -17,8 +17,10 @@ def main():
     ''' __________________________________________ setup _____________________________________________ '''
     llama3_config, gen_config, cloud_config, dist_config = load_configs('gen')
     # distribute configs
-    dist_strategy = dist_config['dist_strategy']
-    assert dist_strategy in ['ddp', 'fsdp', 'default'], f'distribute strategy: {dist_strategy} is not supported'
+    dp_strategy = dist_config['dp_strategy']
+    assert dp_strategy in ['ddp', 'fsdp', 'default'], f'distribute strategy: {dp_strategy} is not supported'
+    dp_size = dist_config['data_parallel_size']
+    tp_size = dist_config['tensor_parallel_size']
     # generation configs
     dialog = gen_config['dialog']
     seed = gen_config['seed']  # defaults to 1337
@@ -37,9 +39,9 @@ def main():
     llama3_config['align'] = False
     # set up DP (distributed data parallel or fully sharded data parallel).
     # torchrun command sets the env variables RANK, LOCAL_RANK, and WORLD_SIZE
-    dp = dist_strategy in ['ddp', 'fsdp']
-    dp_global_rank, dp_local_rank, dp_world_size, master_process, device, _ = init_dist(
-        dist_strategy, False, 0, 1
+    dp = dp_strategy in ['ddp', 'fsdp']
+    dp_global_rank, dp_local_rank, device_mesh, master_process, device, _ = init_dist(
+        dp_strategy, dp_size, tp_size, False, 0
     )
     # set random seed
     torch.manual_seed(seed)
@@ -48,8 +50,7 @@ def main():
     torch.set_float32_matmul_precision('high')
 
     ''' ____________________________________ build & compile model ___________________________________ '''
-    device_ids = [dp_local_rank]
-    model, raw_model = get_model(llama3_config, device, dist_strategy, device_ids)
+    model, raw_model = get_model(llama3_config, device, dp_strategy, dp_local_rank, device_mesh)
 
     ''' ____________________________________________ test ___________________________________________ '''
     # _, _ = generate(model, prompt, gen_batch_size, gen_len, temperature, top_p, device=device)
@@ -59,7 +60,7 @@ def main():
         model, tokenizer, chat_format, prompt, device, gen_batch_size, gen_len, dialog, 
         dp_global_rank
     )
-    ternimate_dist(dist_strategy)
+    ternimate_dist(dp_strategy)
 
 
 if __name__ == '__main__':

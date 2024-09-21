@@ -4,28 +4,28 @@
 ```
 ### simple launch on one node:
 ```bash
-python train/main.py --dp_world_size 1
+python train/main.py
 ```
 
 ### DDP (FSDP) launch on one node by torch.multiprocessing (e.g. 8 GPUs):
 ```bash
-python train/main.py --dp_world_size 8 --torch_mp_launch
+python train/main.py --world_size 8 --torch_mp_launch
 ```
 
 ### DDP (FSDP) launch on one node by torchrun (e.g. 8 GPUs):
 ```bash
-torchrun --standalone --nproc_per_node=8 train/main.py --dp_world_size 8
+torchrun --standalone --nproc_per_node=8 train/main.py
 ```
 
 ### DDP (FSDP) launch on multi node by torchrun (e.g. 2 * 8 GPUs, two nodes):
 ```bash
 # on node 0#
-torchrun --nproc_per_node=8 --nnodes=2 -node_rank=0 --rdzv_backend=c10d --rdzv_endpoint=xxx.xxx.xxx.xxx:xxxx train/main.py --dp_world_size 16
+torchrun --nproc_per_node=8 --nnodes=2 -node_rank=0 --rdzv_backend=c10d --rdzv_endpoint=xxx.xxx.xxx.xxx:xxxx train/main.py
 ```
 
 ```bash
 # on node 1#
-torchrun --nproc_per_node=8 --nnodes=2 -node_rank=1 --rdzv_backend=c10d --rdzv_endpoint=xxx.xxx.xxx.xxx:xxxx train/main.py --dp_world_size 16
+torchrun --nproc_per_node=8 --nnodes=2 -node_rank=1 --rdzv_backend=c10d --rdzv_endpoint=xxx.xxx.xxx.xxx:xxxx train/main.py
 ```
 
 ## lanuch generation task:
