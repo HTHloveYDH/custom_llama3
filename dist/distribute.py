@@ -54,14 +54,9 @@ def init_dist(dist_type:str, dp_size:int, tp_size:int, *args):
         # Create a device mesh with 2 dimensions.
         # First dim is the data parallel dimension
         # Second dim is the tensor parallel dimension.
-        if dist_type == 'fsdp+tp':
-            device_mesh = init_device_mesh(device_type, (dp_size, tp_size), mesh_dim_names=('dp', 'tp'))
-            dp_global_rank = device_mesh['dp'].get_rank()
-            dp_local_rank = device_mesh['dp'].get_local_rank()
-        elif dist_type == 'tp':
-            device_mesh = init_device_mesh(device_type, (tp_size,), mesh_dim_names=('tp',))
-            dp_global_rank = 0
-            dp_local_rank = 0
+        device_mesh = init_device_mesh(device_type, (dp_size, tp_size), mesh_dim_names=('dp', 'tp'))
+        dp_global_rank = device_mesh['dp'].get_rank()
+        dp_local_rank = device_mesh['dp'].get_local_rank()
     elif dist_type == 'default':
         # vanilla, non-DDP run
         dp_global_rank = global_rank = 0
