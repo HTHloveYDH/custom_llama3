@@ -10,28 +10,6 @@ from dist.device import get_devices
 def init_dist(dp_strategy:str, dp_size:int, tp_size:int, *args):
     visible_devices = get_devices('cuda')
     print(f'{len(visible_devices)} visible devices: ', visible_devices, ' detected.')
-    # tensor parallelism
-    if tp_size > 1:
-        global_rank = int(os.environ['RANK'])
-        local_rank = int(os.environ['LOCAL_RANK'])
-        world_size = int(os.environ['WORLD_SIZE'])
-        assert world_size == dp_size * tp_size
-        master_process = True
-        # attempt to autodetect device
-        device = 'cpu'  # defaults to 'cuda:0'
-        if torch.cuda.is_available():
-            device = 'cuda'
-        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-            device = 'mps'
-        device_type = 'cuda' if device.startswith('cuda') else 'cpu'
-        # Create a device mesh with 2 dimensions.
-        # First dim is the data parallel dimension
-        # Second dim is the tensor parallel dimension.
-        device_mesh = init_device_mesh(device_type, (dp_size, tp_size), mesh_dim_names=('dp', 'tp'))
-        dp_global_rank = device_mesh['dp'].get_global_rank()
-        dp_local_rank = device_mesh['dp'].get_local_rank()
-        return dp_global_rank, dp_local_rank, device_mesh, master_process, device, device_type
-    # data parallelism
     if dp_strategy in ['ddp', 'fsdp']:
         # use of FSDP or DDP demands CUDA, we set the device appropriately according to rank
         assert torch.cuda.is_available(), 'for now i think we need CUDA for DDP or FSDP'
@@ -58,7 +36,28 @@ def init_dist(dp_strategy:str, dp_size:int, tp_size:int, *args):
         device = f'cuda:{local_rank}'
         torch.cuda.set_device(device)
         print(f'using device: {device}')
-    elif dp_strategy in ['default']:
+        device_type = 'cuda' if device.startswith('cuda') else 'cpu'
+        device_mesh = {'dp': torch.ones(dp_size), 'tp': torch.ones(tp_size)}
+    elif dp_strategy == 'hsdp':
+        global_rank = int(os.environ['RANK'])
+        local_rank = int(os.environ['LOCAL_RANK'])
+        world_size = int(os.environ['WORLD_SIZE'])
+        assert world_size == dp_size * tp_size
+        master_process = True
+        # attempt to autodetect device
+        device = 'cpu'  # defaults to 'cuda:0'
+        if torch.cuda.is_available():
+            device = 'cuda'
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            device = 'mps'
+        device_type = 'cuda' if device.startswith('cuda') else 'cpu'
+        # Create a device mesh with 2 dimensions.
+        # First dim is the data parallel dimension
+        # Second dim is the tensor parallel dimension.
+        device_mesh = init_device_mesh(device_type, (dp_size, tp_size), mesh_dim_names=('dp', 'tp'))
+        dp_global_rank = device_mesh['dp'].get_global_rank()
+        dp_local_rank = device_mesh['dp'].get_local_rank()
+    elif dp_strategy == 'default':
         # vanilla, non-DDP run
         dp_global_rank = global_rank = 0
         dp_local_rank = local_rank = 0
@@ -71,8 +70,8 @@ def init_dist(dp_strategy:str, dp_size:int, tp_size:int, *args):
         elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
             device = 'mps'
         print(f'using device: {device}')
-    device_type = 'cuda' if device.startswith('cuda') else 'cpu'
-    device_mesh = {'dp': torch.ones(dp_size), 'tp': torch.ones(tp_size)}
+        device_type = 'cuda' if device.startswith('cuda') else 'cpu'
+        device_mesh = {'dp': torch.ones(dp_size), 'tp': torch.ones(tp_size)}
     return dp_global_rank, dp_local_rank, device_mesh, master_process, device, device_type
 
 def ternimate_dist(dist_strategy:str):
