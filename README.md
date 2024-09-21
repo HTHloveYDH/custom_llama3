@@ -93,3 +93,7 @@ pip install -r ./requirements.txt
 ## some useful links:
 ### quant
 https://chatgpt.com/share/31aa8af3-dce2-457f-85db-2b18b3c242ce
+
+### torch.distributed
+https://pytorch.org/docs/stable/distributed.html
+The package (torch.distributed) needs to be initialized using the torch.distributed.init_process_group() or torch.distributed.device_mesh.init_device_mesh() function before calling any other methods. Both block until all processes have joined.
