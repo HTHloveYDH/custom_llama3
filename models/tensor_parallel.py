@@ -31,21 +31,7 @@ def TP(model, dp_mesh, tp_mesh):
                 output_layouts=Replicate()
             ),
         }
-    model = parallelize_module(
-        model,
-        tp_mesh,
-        {
-            'tok_embeddings': RowwiseParallel(
-                input_layouts=Replicate(),
-                output_layouts=Shard(1),
-            ),
-            'norm': SequenceParallel(),
-            'output': ColwiseParallel(
-                input_layouts=Shard(1),
-                output_layouts=Replicate()
-            ),
-        }
-    )
+    model = parallelize_module(model, tp_mesh, layer_tp_plan)
     for block_id, transformer_block in enumerate(model.layers):
         layer_tp_plan = {
             'attention_norm': SequenceParallel(),
