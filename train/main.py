@@ -32,8 +32,8 @@ def main(dp_local_rank=0, torch_mp_launch=False):
     # load configs
     llama3_config, train_config, data_config, cloud_config, dist_config = load_configs('train')
     # distribute configs
-    dp_strategy = dist_config['dp_strategy']
-    assert dp_strategy in ['ddp', 'fsdp', 'default'], f'distribute strategy: {dp_strategy} is not supported'
+    dist_strategy = dist_config['dist_strategy']
+    assert dist_strategy in ['ddp', 'fsdp', 'fsdp+tp', 'tp', 'default'], f'distribute strategy: {dist_strategy} is not supported'
     dp_size = dist_config['data_parallel_size']
     tp_size = dist_config['tensor_parallel_size']
     # train configs
@@ -74,9 +74,9 @@ def main(dp_local_rank=0, torch_mp_launch=False):
     llama3_config['align'] = align
     # set up DP (distributed data parallel or fully sharded data parallel) process group.
     # torchrun command sets the env variables RANK, LOCAL_RANK, and WORLD_SIZE
-    dp = dp_strategy in ['ddp', 'fsdp']
+    dp = dist_strategy in ['ddp', 'fsdp', 'fsdp+tp']
     dp_global_rank, dp_local_rank, device_mesh, master_process, device, _ = init_dist(
-        dp_strategy, dp_size, tp_size, torch_mp_launch, dp_local_rank
+        dist_strategy, dp_size, tp_size, torch_mp_launch, dp_local_rank
     )
     # set random seed
     torch.manual_seed(seed)
@@ -104,7 +104,7 @@ def main(dp_local_rank=0, torch_mp_launch=False):
     val_data_loader = DataLoaderLite_factory.create(align, dialog, data_format, **kwargs)
 
     ''' ____________________________________ build & compile model ___________________________________ '''
-    model, raw_model = get_model(llama3_config, device, dp_strategy, dp_local_rank, device_mesh)
+    model, raw_model = get_model(llama3_config, device, dist_strategy, dp_local_rank, device_mesh)
 
     ''' ____________________________________________ train ___________________________________________ '''
     # get optimizer
@@ -137,7 +137,7 @@ def main(dp_local_rank=0, torch_mp_launch=False):
                 dp_global_rank
             )
     # terminate process group
-    ternimate_dist(dp_strategy)
+    ternimate_dist(dist_strategy)
 
 
 if __name__ == '__main__':
