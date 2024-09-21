@@ -105,7 +105,7 @@ def main(dp_local_rank=0, torch_mp_launch=False):
     val_data_loader = DataLoaderLite_factory.create(align, dialog, data_format, **kwargs)
 
     ''' ____________________________________ build & compile model ___________________________________ '''
-    model, raw_model = get_model(llama3_config, device, dist_type, dp_local_rank, tp, device_mesh)
+    model, raw_model = get_model(llama3_config, device, dist_type, tp, device_mesh)
 
     ''' ____________________________________________ train ___________________________________________ '''
     # get optimizer

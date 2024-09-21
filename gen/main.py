@@ -51,7 +51,7 @@ def main():
     torch.set_float32_matmul_precision('high')
 
     ''' ____________________________________ build & compile model ___________________________________ '''
-    model, raw_model = get_model(llama3_config, device, dist_type, dp_local_rank, tp, device_mesh)
+    model, raw_model = get_model(llama3_config, device, dist_type, tp, device_mesh)
 
     ''' ____________________________________________ test ___________________________________________ '''
     # _, _ = generate(model, prompt, gen_batch_size, gen_len, temperature, top_p, device=device)

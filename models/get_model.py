@@ -19,7 +19,7 @@ from models.DPOLlama import DPOLlama
 from models.tensor_parallel import TP
 
 
-def get_model(llama_config:dict, device, dist_type:str, dp_local_rank:int, tp:bool, device_mesh:dict):
+def get_model(llama_config:dict, device, dist_type:str, tp:bool, device_mesh:dict):
     assert llama_config['load_weights'] in ['official', 'local', None], f"load weights: {llama_config['load_weights']}  is not supported"
     # create model
     if llama_config['load_weights'] == 'official':
@@ -46,7 +46,7 @@ def get_model(llama_config:dict, device, dist_type:str, dp_local_rank:int, tp:bo
         dp_mesh = None
     # data parallelism
     if dist_type == 'ddp':
-        model = DDP(model, device_ids=[dp_local_rank])
+        model = DDP(model, device_ids=[device])
     elif dist_type == 'fsdp':
         # reference: https://pytorch.org/tutorials/intermediate/FSDP_tutorial.html#how-to-use-fsdp
         model = FSDP(model, device_mesh=dp_mesh, use_orig_params=True)
