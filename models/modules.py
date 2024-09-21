@@ -100,7 +100,7 @@ class Attention(nn.Module):
         else:
             freqs_cis = RoPE.precompute_freqs_cis(
                 self.head_dim, self.args.max_seq_len * 2, self.args.rope_theta, x.device
-            )
+            )  # (use 2x max sequence length to be safe)
             # freqs_cis = freqs_cis[start_pos:start_pos + seq_len]
             start_pos_ = start_pos % (self.args.max_seq_len * 2)
             freqs_cis = freqs_cis[start_pos_:start_pos_ + seq_len]
