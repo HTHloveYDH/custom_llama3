@@ -7,10 +7,10 @@ from torch.distributed.device_mesh import init_device_mesh
 from dist.device import get_devices
 
 
-def init_dist(dist_strategy:str, dp_size:int, tp_size:int, *args):
+def init_dist(dist_type:str, dp_size:int, tp_size:int, *args):
     visible_devices = get_devices('cuda')
     print(f'{len(visible_devices)} visible devices: ', visible_devices, ' detected.')
-    if dist_strategy in ['ddp', 'fsdp']:
+    if dist_type in ['ddp', 'fsdp']:
         # use of FSDP or DDP demands CUDA, we set the device appropriately according to rank
         assert torch.cuda.is_available(), 'for now i think we need CUDA for DDP or FSDP'
         # launch by torch.multiprocessing
@@ -37,8 +37,8 @@ def init_dist(dist_strategy:str, dp_size:int, tp_size:int, *args):
         torch.cuda.set_device(device)
         print(f'using device: {device}')
         device_type = 'cuda' if device.startswith('cuda') else 'cpu'
-        device_mesh = {'dp': torch.ones(dp_size), 'tp': torch.ones(tp_size)}
-    elif dist_strategy in ['fsdp+tp', 'tp']:
+        device_mesh = None
+    elif dist_type in ['fsdp+tp', 'tp']:
         global_rank = int(os.environ['RANK'])
         local_rank = int(os.environ['LOCAL_RANK'])
         world_size = int(os.environ['WORLD_SIZE'])
@@ -57,7 +57,7 @@ def init_dist(dist_strategy:str, dp_size:int, tp_size:int, *args):
         device_mesh = init_device_mesh(device_type, (dp_size, tp_size), mesh_dim_names=('dp', 'tp'))
         dp_global_rank = device_mesh['dp'].get_global_rank()
         dp_local_rank = device_mesh['dp'].get_local_rank()
-    elif dist_strategy == 'default':
+    elif dist_type == 'default':
         # vanilla, non-DDP run
         dp_global_rank = global_rank = 0
         dp_local_rank = local_rank = 0
@@ -71,11 +71,11 @@ def init_dist(dist_strategy:str, dp_size:int, tp_size:int, *args):
             device = 'mps'
         print(f'using device: {device}')
         device_type = 'cuda' if device.startswith('cuda') else 'cpu'
-        device_mesh = {'dp': torch.ones(dp_size), 'tp': torch.ones(tp_size)}
+        device_mesh = None
     return dp_global_rank, dp_local_rank, device_mesh, master_process, device, device_type
 
-def ternimate_dist(dist_strategy:str):
-    if dist_strategy in ['ddp', 'fsdp']:
+def ternimate_dist(dist_type:str):
+    if dist_type in ['ddp', 'fsdp']:
         destroy_process_group()
     else:
         pass

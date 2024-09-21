@@ -19,7 +19,7 @@ from models.DPOLlama import DPOLlama
 from models.tensor_parallel import TP
 
 
-def get_model(llama_config:dict, device, dist_strategy:str, dp_local_rank:int, device_mesh:dict):
+def get_model(llama_config:dict, device, dist_type:str, dp_local_rank:int, tp:bool, device_mesh:dict):
     assert llama_config['load_weights'] in ['official', 'local', None], f"load weights: {llama_config['load_weights']}  is not supported"
     # create model
     if llama_config['load_weights'] == 'official':
@@ -38,16 +38,16 @@ def get_model(llama_config:dict, device, dist_strategy:str, dp_local_rank:int, d
     if use_compile:
         model = torch.compile(model)
     # tensor parallelism
-    if device_mesh['tp'].size() > 1:
+    if tp:
         tp_mesh = device_mesh['tp']
         dp_mesh = device_mesh['dp']  # update data parallel mesh
         model = TP(model, tp_mesh)
     else:
         dp_mesh = None
     # data parallelism
-    if dist_strategy == 'ddp':
+    if dist_type == 'ddp':
         model = DDP(model, device_ids=[dp_local_rank])
-    elif dist_strategy == 'fsdp':
+    elif dist_type == 'fsdp':
         # reference: https://pytorch.org/tutorials/intermediate/FSDP_tutorial.html#how-to-use-fsdp
         model = FSDP(model, device_mesh=dp_mesh, use_orig_params=True)
         # my_auto_wrap_policy = functools.partial(size_based_auto_wrap_policy, min_num_params=100)
@@ -55,6 +55,6 @@ def get_model(llama_config:dict, device, dist_strategy:str, dp_local_rank:int, d
         #     model, auto_wrap_policy=my_auto_wrap_policy, cpu_offload=CPUOffload(offload_params=True), 
         #     device_mesh=dp_mesh, use_orig_params=True
         # )
-    print(f'distribute strategy is set to {dist_strategy}')
-    raw_model = model.module if dist_strategy in ['ddp', 'fsdp'] else model  # always contains the 'raw' unwrapped model
+    print(f'distribute strategy is set to {dist_type}')
+    raw_model = model.module if dist_type in ['ddp', 'fsdp'] else model  # always contains the 'raw' unwrapped model
     return model, raw_model

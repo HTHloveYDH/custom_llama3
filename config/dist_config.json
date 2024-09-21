@@ -1,5 +1,5 @@
 {
-    "dist_strategy": "default", 
+    "dist_type": "default", 
     "data_parallel_size": 1, 
     "tensor_parallel_size": 1
 }
