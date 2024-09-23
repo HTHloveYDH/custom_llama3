@@ -19,14 +19,14 @@ def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch
         # x, y = data_loader.get_batch_data()  # only for demo
         x, y = data_loader.next_batch()
         x, y = x.to(device), y.to(device)
-        if dp:
+        if dp or tp:
             model.require_backward_grad_sync = ((step + 1) % grad_accum_steps == 0)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
             logits = model(x)
             loss = model.compute_loss(logits, y, tp)
         loss_accum = loss.detach()
         loss.backward()
-        if dp:
+        if dp or tp:
             dist.all_reduce(loss_accum, op=dist.ReduceOp.AVG)  # all_reduce (mean)
         # update weights at the 'grad_accum_steps'st step of every 'grad_accum_steps' steps
         if (step + 1) % grad_accum_steps == 0:  
@@ -57,7 +57,7 @@ def st_valid_on_epoch(model, raw_model, data_loader, device:str, val_steps:int, 
             loss = model.compute_loss(logits, y, tp)
         loss = loss / val_steps
         val_loss_accum += loss.detach()
-    if dp:
+    if dp or tp:
         dist.all_reduce(val_loss_accum, op=dist.ReduceOp.AVG)  # all_reduce (mean)
         val_loss_tracker.append(val_loss_accum.item())
     if master_process:
@@ -80,7 +80,7 @@ def dpo_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoc
         loss_accum = 0.0
         x_winner, x_loser = data_loader.next_batch()
         x_winner, x_loser = x_winner.to(device), x_loser.to(device)
-        if dp:
+        if dp or tp:
             model.require_backward_grad_sync = ((step + 1) % grad_accum_steps == 0)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
             winner_values, winner_logits = model(x_winner)
@@ -90,7 +90,7 @@ def dpo_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoc
             loss = model.dpo_loss(winner_values[:, -1], loser_values[:, -1], tp)
         loss_accum = loss.detach()
         loss.backward()
-        if dp:
+        if dp or tp:
             dist.all_reduce(loss_accum, op=dist.ReduceOp.AVG)  # all_reduce (mean)
         # update weights at the 'grad_accum_steps'st step of every 'grad_accum_steps' steps
         if (step + 1) % grad_accum_steps == 0:  
@@ -123,7 +123,7 @@ def dpo_valid_on_epoch(model, raw_model, data_loader, device:str, val_steps:int,
             loss = model.dpo_loss(winner_values[:, -1], loser_values[:, -1], tp)
         loss = loss / val_steps
         val_loss_accum += loss.detach()
-    if dp:
+    if dp or tp:
         dist.all_reduce(val_loss_accum, op=dist.ReduceOp.AVG)  # all_reduce (mean)
         val_loss_tracker.append(val_loss_accum.item())
     if master_process:
