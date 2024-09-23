@@ -3,6 +3,7 @@ import os
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+from torch.distributed.tensor.parallel import loss_parallel
 
 from config.ModelArgs import ModelArgs
 from models.modules import RMSNorm, Attention, TransformerBlock
@@ -20,7 +21,7 @@ class Transformer(nn.Module):
         self.norm = RMSNorm(params.dim, eps=params.norm_eps)    
         self.output = nn.Linear(params.dim, params.vocab_size, bias=False)  
  
-    def forward(self, x, targets=None, start_pos=0):
+    def forward(self, x, start_pos=0):
         # start_pos: start posotion in inference mode
         # x shape: [bsz, seq_len] -> h shape: [bsz, seq_len, dim]  
         h = self.tok_embeddings(x)     
@@ -30,10 +31,16 @@ class Transformer(nn.Module):
         # self.output maps embedding to logits with length of vocabulary  
         # h shape: [bsz, seq_len, dim] -> logits shape: [bsz, seq_len, vocab_size]  
         logits = self.output(h).float()  
-        loss = None   
-        if targets is not None:
-            loss = F.cross_entropy(logits.view(-1, self.params.vocab_size), targets.view(-1))  
-        return logits, loss
+        return logits
+
+    def compute_loss(self, pred, target, tp:bool):  
+        if target is not None:
+            if tp:
+                with loss_parallel():
+                    loss = F.cross_entropy(pred.view(-1, self.params.vocab_size), target.view(-1))
+            else:
+                loss = F.cross_entropy(pred.view(-1, self.params.vocab_size), target.view(-1))
+        return loss
 
     @staticmethod
     def create_llama_model(llama_config:dict):

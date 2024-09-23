@@ -7,8 +7,11 @@ from torch.distributed.tensor.parallel import (
     SequenceParallel
 )
 
+from models.Transformer import Transformer as Llama
+from models.DPOLlama import DPOLlama
 
-def TP(model, dp_mesh, tp_mesh):
+
+def llama_TP(model, dp_mesh, tp_mesh):
     # parallelize the first embedding and the last linear out projection
     if dp_mesh is None:
         layer_tp_plan = {
@@ -62,4 +65,13 @@ def TP(model, dp_mesh, tp_mesh):
             device_mesh=tp_mesh,
             parallelize_plan=layer_tp_plan
         )
+    return model
+
+def TP(model, dp_mesh, tp_mesh):
+    if isinstance(model, Llama):
+        model = llama_TP(model, dp_mesh, tp_mesh)
+    elif isinstance(model, DPOLlama):
+        layer_tp_plan = {'value_head': RowwiseParallel()}
+        model = parallelize_module(model, tp_mesh, layer_tp_plan)
+        model.llm = llama_TP(model.llm, dp_mesh, tp_mesh)
     return model
