@@ -8,6 +8,7 @@ from utils.get_device_type import get_device_type
 
 def generate_tokens(model, tokens:list, gen_batch_size:int, gen_len:int, device:str, \
                     dp_global_rank:int):
+    assert isinstance(tokens, list)
     device_type = get_device_type(device)
     tokens = torch.tensor(tokens, dtype=torch.long)  # shape: (len(prompt))
     tokens = tokens.unsqueeze(0).repeat(gen_batch_size, 1)  # shape: (gen_batch_size, len(prompt))
@@ -37,6 +38,7 @@ def generate_tokens(model, tokens:list, gen_batch_size:int, gen_len:int, device:
             xcol = torch.gather(topk_indices, -1, ix) # (B, 1)
             # append to the sequence
             xgen = torch.cat((xgen, xcol), dim=1)
+    return xgen
     
 def generate(model, tokenizer, chat_format, prompt, device:str, gen_batch_size:int, \
              gen_len:int, dialog:bool, dp_global_rank=0):
@@ -64,16 +66,16 @@ def generate(model, tokenizer, chat_format, prompt, device:str, gen_batch_size:i
 '''reference from https://github.com/bklieger-groq/g1/blob/main/g1.py'''
 def get_model_response(model, cot_format, tokenizer, cot_prompt, gen_len:int, is_final_answer:bool, \
                        device:str, dp_global_rank:int):
-    tokens = cot_format.encode_cot_prompt(cot_prompt)  # python <class 'list'>
+    tokens = cot_format.encode_dialog_prompt(cot_prompt)  # python <class 'list'>
     # sampling configuration
     for attempt in range(3):
         try:
             if is_final_answer:
-                xgen = generate_tokens(model, 1, gen_len, device, dp_global_rank)
+                xgen = generate_tokens(model, tokens, 1, gen_len, device, dp_global_rank)
                 response = tokenizer.decode(xgen)
                 return response
             else:
-                xgen = generate_tokens(model, 1, gen_len, device, dp_global_rank)
+                xgen = generate_tokens(model, tokens, 1, gen_len, device, dp_global_rank)
                 response = tokenizer.decode(xgen)
                 return json.loads(response)
         except Exception as e:
@@ -84,7 +86,7 @@ def get_model_response(model, cot_format, tokenizer, cot_prompt, gen_len:int, is
                     return {'title': 'Error', 'content': f'Failed to generate step after 3 attempts. Error: {str(e)}', 'next_action': 'final_answer'}
             time.sleep(1)  # Wait for 1 second before retrying
 
-def cot_generate(model, prompt:str, tokenizer, cot_format, device:str, gen_len:int, \
+def cot_generate(model, tokenizer, cot_format, prompt:str, device:str, gen_len:int, \
                  dp_global_rank=0):
     model.eval()
     cot_prompt = [
@@ -112,13 +114,14 @@ Example of a valid JSON response:
         end_time = time.time()
         think_time = end_time - start_time
         total_think_time += think_time
-        steps.append((f'Step {step_count}: {step_data['title']}', step_data['content'], think_time))
+        steps.append((f"Step {step_count}: {step_data['title']}", step_data['content'], think_time))
         cot_prompt.append({'role': 'assistant', 'content': json.dumps(step_data)})
         if step_data['next_action'] == 'final_answer' or step_count > 25: # Maximum of 25 steps to prevent infinite think time. Can be adjusted.
             break
         step_count += 1
         # Yield after each step for Streamlit to update
-        yield steps, None  # We're not yielding the total time until the end
+        # yield steps, None  # We're not yielding the total time until the end
+        print(f'[cot generation text] rank {dp_global_rank}: {steps}')
     # Generate final answer
     cot_prompt.append({'role': 'user', 'content': 'Please provide the final answer based solely on your reasoning above. Do not use JSON formatting. Only provide the text response without any titles or preambles. Retain any formatting as instructed by the original prompt, such as exact formatting for free response or multiple choice.'})
     start_time = time.time()
@@ -129,4 +132,6 @@ Example of a valid JSON response:
     think_time = end_time - start_time
     total_think_time += think_time
     steps.append(('Final Answer', final_data, think_time))
-    yield steps, total_think_time
+    # yield steps, total_think_time
+    print(f'[cot final generation text] rank {dp_global_rank}: {steps}')
+    return steps, total_think_time
