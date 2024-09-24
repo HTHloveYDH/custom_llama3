@@ -172,7 +172,7 @@ class Attention(nn.Module):
             [
                 self.cache_k[:, 1:, :, :],
                 torch.zeros(
-                    (self.args.max_batch_size, self.args.max_seq_len, self.n_kv_heads, self.head_dim),
+                    (self.args.max_batch_size, 1, self.n_kv_heads, self.head_dim),
                     device=self.cache_k.device
                 )
             ],
@@ -182,7 +182,7 @@ class Attention(nn.Module):
             [
                 self.cache_v[:, 1:, :, :],
                 torch.zeros(
-                    (self.args.max_batch_size, self.args.max_seq_len, self.n_kv_heads, self.head_dim),
+                    (self.args.max_batch_size, 1, self.n_kv_heads, self.head_dim),
                     device=self.cache_v.device
                 )
             ],
