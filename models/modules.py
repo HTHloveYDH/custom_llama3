@@ -251,7 +251,7 @@ class InfiniteAttention(Attention):
             xq, xk = RoPE.apply_rotary_emb(xq, xk, freqs_cis)
             # shift cache_k, cache_v if necessary
             if start_pos % self.args.max_seq_len == 0:
-                self.shift_cache()
+                self._shift_cache()
             self.cache_k = self.cache_k.to(xq)
             self.cache_v = self.cache_v.to(xq)
             # save key and value to cache (kv_cache)
