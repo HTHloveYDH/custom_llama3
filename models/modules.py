@@ -166,8 +166,8 @@ class Attention(nn.Module):
         )
 
     def shift_cache(self):
-        # self.cache_k[:, :-1, :, :] = self.cache_k[:, 1:, :, :]  # not efficient, sometimes error happens
-        # self.cache_v[:, :-1, :, :] = self.cache_v[:, 1:, :, :]  # not efficient, sometimes error happens
+        # self.cache_k[:, :-1, :, :] = self.cache_k[:, 1:, :, :]  # O(seq_len), not efficient, sometimes error happens
+        # self.cache_v[:, :-1, :, :] = self.cache_v[:, 1:, :, :]  # O(seq_len), not efficient, sometimes error happens
         self.cache_k = torch.cat(
             [
                 self.cache_k[:, 1:, :, :],
