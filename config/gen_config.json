@@ -1,6 +1,6 @@
 {
     "dialog": false,
-    "cot": false, 
+    "cot": true, 
 
     "seed": 1337, 
     "gen_len": 32,
