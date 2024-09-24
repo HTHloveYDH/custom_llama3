@@ -141,7 +141,10 @@ class Transformer(nn.Module):
         super().train(mode)
         for module in self.modules():
             if isinstance(module, Attention):
-                module.disable_kv_cache()
+                if mode:
+                    module.disable_kv_cache()
+                else:
+                    module.enable_kv_cache()
 
     def eval(self):
         super().eval()
