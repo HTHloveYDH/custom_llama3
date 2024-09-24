@@ -1,5 +1,4 @@
 import time
-import os
 import json
 
 import torch
@@ -7,23 +6,14 @@ from torch.nn import functional as F
 
 from utils.get_device_type import get_device_type
 
-
-def generate(model, tokenizer, chat_format, prompt, device:str, gen_batch_size:int, \
-             gen_len:int, dialog:bool, dp_global_rank=0):
-    model.eval()
-    # preprocess for input prompt: python <class 'list'>
-    if dialog:
-        assert isinstance(prompt, list)  # example: [{"role": "system", "content": "xxx.",}, {"role": "user", "content": "xxx.",}]
-        tokens = chat_format.encode_dialog_prompt(prompt)  # python <class 'list'>
-    else:
-        assert isinstance(prompt, str)  # "Hello, I am a student."
-        tokens = tokenizer.encode(prompt, bos=True, eos=True)  # python <class 'list'>
+def generate_tokens(model, tokens:list, gen_batch_size:int, gen_len:int, device:str, \
+                    dp_global_rank:int):
+    device_type = get_device_type(device)
     tokens = torch.tensor(tokens, dtype=torch.long)  # shape: (len(prompt))
     tokens = tokens.unsqueeze(0).repeat(gen_batch_size, 1)  # shape: (gen_batch_size, len(prompt))
     xgen = tokens.to(device)  # current shape: [gen_batch_size, len(prompt))
     xcol = xgen
     # sampling configuration
-    device_type = get_device_type(device)
     sample_rng = torch.Generator(device=device)
     sample_rng.manual_seed(42 + dp_global_rank)
     start_pos = 0
@@ -47,6 +37,18 @@ def generate(model, tokenizer, chat_format, prompt, device:str, gen_batch_size:i
             xcol = torch.gather(topk_indices, -1, ix) # (B, 1)
             # append to the sequence
             xgen = torch.cat((xgen, xcol), dim=1)
+    
+def generate(model, tokenizer, chat_format, prompt, device:str, gen_batch_size:int, \
+             gen_len:int, dialog:bool, dp_global_rank=0):
+    model.eval()
+    # preprocess for input prompt: python <class 'list'>
+    if dialog:
+        assert isinstance(prompt, list)  # example: [{'role': 'system', 'content': 'xxx.',}, {'role': 'user', 'content': 'xxx.',}]
+        tokens = chat_format.encode_dialog_prompt(prompt)  # python <class 'list'>
+    else:
+        assert isinstance(prompt, str)  # 'Hello, I am a student.'
+        tokens = tokenizer.encode(prompt, bos=True, eos=True)  # python <class 'list'>
+    xgen = generate_tokens(model, tokens, gen_batch_size, gen_len, device, dp_global_rank)
     return_messages = []
     # print the generated text
     for i in range(gen_batch_size):
@@ -60,62 +62,71 @@ def generate(model, tokenizer, chat_format, prompt, device:str, gen_batch_size:i
     return return_messages
 
 '''reference from https://github.com/bklieger-groq/g1/blob/main/g1.py'''
-def call_model(model, tokens, max_tokens, is_final_answer=False):
-    assert model is not None
+def get_model_response(model, cot_format, tokenizer, cot_prompt, gen_len:int, is_final_answer:bool, \
+                       device:str, dp_global_rank:int):
+    tokens = cot_format.encode_cot_prompt(cot_prompt)  # python <class 'list'>
+    # sampling configuration
     for attempt in range(3):
         try:
             if is_final_answer:
-                response = model(tokens)
+                xgen = generate_tokens(model, 1, gen_len, device, dp_global_rank)
+                response = tokenizer.decode(xgen)
                 return response
             else:
-                response = model(tokens)
+                xgen = generate_tokens(model, 1, gen_len, device, dp_global_rank)
+                response = tokenizer.decode(xgen)
                 return json.loads(response)
         except Exception as e:
             if attempt == 2:
                 if is_final_answer:
-                    return {"title": "Error", "content": f"Failed to generate final answer after 3 attempts. Error: {str(e)}"}
+                    return {'title': 'Error', 'content': f'Failed to generate final answer after 3 attempts. Error: {str(e)}'}
                 else:
-                    return {"title": "Error", "content": f"Failed to generate step after 3 attempts. Error: {str(e)}", "next_action": "final_answer"}
+                    return {'title': 'Error', 'content': f'Failed to generate step after 3 attempts. Error: {str(e)}', 'next_action': 'final_answer'}
             time.sleep(1)  # Wait for 1 second before retrying
 
-def cot_generate(model, prompt:str, tokenizer, cot_format, device:str, gen_len:int, dp_global_rank=0):
+def cot_generate(model, prompt:str, tokenizer, cot_format, device:str, gen_len:int, \
+                 dp_global_rank=0):
+    model.eval()
     cot_prompt = [
-        {"role": "system", "content": """You are an expert AI assistant that explains your reasoning step by step. For each step, provide a title that describes what you're doing in that step, along with the content. Decide if you need another step or if you're ready to give the final answer. Respond in JSON format with 'title', 'content', and 'next_action' (either 'continue' or 'final_answer') keys. USE AS MANY REASONING STEPS AS POSSIBLE. AT LEAST 3. BE AWARE OF YOUR LIMITATIONS AS AN LLM AND WHAT YOU CAN AND CANNOT DO. IN YOUR REASONING, INCLUDE EXPLORATION OF ALTERNATIVE ANSWERS. CONSIDER YOU MAY BE WRONG, AND IF YOU ARE WRONG IN YOUR REASONING, WHERE IT WOULD BE. FULLY TEST ALL OTHER POSSIBILITIES. YOU CAN BE WRONG. WHEN YOU SAY YOU ARE RE-EXAMINING, ACTUALLY RE-EXAMINE, AND USE ANOTHER APPROACH TO DO SO. DO NOT JUST SAY YOU ARE RE-EXAMINING. USE AT LEAST 3 METHODS TO DERIVE THE ANSWER. USE BEST PRACTICES.
+        {'role': 'system', 'content': '''You are an expert AI assistant that explains your reasoning step by step. For each step, provide a title that describes what you're doing in that step, along with the content. Decide if you need another step or if you're ready to give the final answer. Respond in JSON format with 'title', 'content', and 'next_action' (either 'continue' or 'final_answer') keys. USE AS MANY REASONING STEPS AS POSSIBLE. AT LEAST 3. BE AWARE OF YOUR LIMITATIONS AS AN LLM AND WHAT YOU CAN AND CANNOT DO. IN YOUR REASONING, INCLUDE EXPLORATION OF ALTERNATIVE ANSWERS. CONSIDER YOU MAY BE WRONG, AND IF YOU ARE WRONG IN YOUR REASONING, WHERE IT WOULD BE. FULLY TEST ALL OTHER POSSIBILITIES. YOU CAN BE WRONG. WHEN YOU SAY YOU ARE RE-EXAMINING, ACTUALLY RE-EXAMINE, AND USE ANOTHER APPROACH TO DO SO. DO NOT JUST SAY YOU ARE RE-EXAMINING. USE AT LEAST 3 METHODS TO DERIVE THE ANSWER. USE BEST PRACTICES.
 
 Example of a valid JSON response:
 ```json
 {
-    "title": "Identifying Key Information",
-    "content": "To begin solving this problem, we need to carefully examine the given information and identify the crucial elements that will guide our solution process. This involves...",
-    "next_action": "continue"
+    'title': 'Identifying Key Information',
+    'content': 'To begin solving this problem, we need to carefully examine the given information and identify the crucial elements that will guide our solution process. This involves...',
+    'next_action': 'continue'
 }```
-"""},
-        {"role": "user", "content": cot_prompt},
-        {"role": "assistant", "content": "Thank you! I will now think step by step following my instructions, starting at the beginning after decomposing the problem."}
+'''},
+        {'role': 'user', 'content': prompt},
+        {'role': 'assistant', 'content': 'Thank you! I will now think step by step following my instructions, starting at the beginning after decomposing the problem.'}
     ]
     steps = []
     step_count = 1
-    total_thinking_time = 0
-    tokens = cot_format.encode_cot_prompt(prompt)  # python <class 'list'>
+    total_think_time = 0
     while True:
         start_time = time.time()
-        step_data = call_model(model, messages, 300)
+        step_data = get_model_response(
+            model, cot_format, tokenizer, cot_prompt, gen_len // 4, False, device, dp_global_rank
+        )  # json format
         end_time = time.time()
-        thinking_time = end_time - start_time
-        total_thinking_time += thinking_time
-        steps.append((f"Step {step_count}: {step_data['title']}", step_data['content'], thinking_time))
-        messages.append({"role": "assistant", "content": json.dumps(step_data)})
-        if step_data['next_action'] == 'final_answer' or step_count > 25: # Maximum of 25 steps to prevent infinite thinking time. Can be adjusted.
+        think_time = end_time - start_time
+        total_think_time += think_time
+        steps.append((f'Step {step_count}: {step_data['title']}', step_data['content'], think_time))
+        cot_prompt.append({'role': 'assistant', 'content': json.dumps(step_data)})
+        if step_data['next_action'] == 'final_answer' or step_count > 25: # Maximum of 25 steps to prevent infinite think time. Can be adjusted.
             break
         step_count += 1
         # Yield after each step for Streamlit to update
         yield steps, None  # We're not yielding the total time until the end
     # Generate final answer
-    messages.append({"role": "user", "content": "Please provide the final answer based solely on your reasoning above. Do not use JSON formatting. Only provide the text response without any titles or preambles. Retain any formatting as instructed by the original prompt, such as exact formatting for free response or multiple choice."})
+    cot_prompt.append({'role': 'user', 'content': 'Please provide the final answer based solely on your reasoning above. Do not use JSON formatting. Only provide the text response without any titles or preambles. Retain any formatting as instructed by the original prompt, such as exact formatting for free response or multiple choice.'})
     start_time = time.time()
-    final_data = call_model(model, messages, 1200, is_final_answer=True)
+    final_data = get_model_response(
+        model, cot_format, tokenizer, cot_prompt, gen_len, True, device, dp_global_rank
+    )  # text format, not json format
     end_time = time.time()
-    thinking_time = end_time - start_time
-    total_thinking_time += thinking_time
-    steps.append(("Final Answer", final_data, thinking_time))
-    yield steps, total_thinking_time
+    think_time = end_time - start_time
+    total_think_time += think_time
+    steps.append(('Final Answer', final_data, think_time))
+    yield steps, total_think_time
