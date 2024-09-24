@@ -108,7 +108,7 @@ class Attention(nn.Module):
             xq, xk = RoPE.apply_rotary_emb(xq, xk, freqs_cis)
             # shift cache_k, cache_v if necessary
             if start_pos % self.args.max_seq_len == 0:
-                self.shift_cache()
+                self._shift_cache()
             self.cache_k = self.cache_k.to(xq)
             self.cache_v = self.cache_v.to(xq)
             # save key and value to cache (kv_cache)
@@ -165,7 +165,7 @@ class Attention(nn.Module):
             .reshape(bsz, seq_len, n_kv_heads * n_rep, head_dim)
         )
 
-    def shift_cache(self):
+    def _shift_cache(self):
         # self.cache_k[:, :-1, :, :] = self.cache_k[:, 1:, :, :]  # O(seq_len), not efficient, sometimes error happens
         # self.cache_v[:, :-1, :, :] = self.cache_v[:, 1:, :, :]  # O(seq_len), not efficient, sometimes error happens
         self.cache_k = torch.cat(
