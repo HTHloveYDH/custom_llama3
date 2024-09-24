@@ -166,8 +166,28 @@ class Attention(nn.Module):
         )
 
     def shift_cache(self):
-        self.cache_k[:, :-1, :, :] = self.cache_k[:, 1:, :, :]
-        self.cache_v[:, :-1, :, :] = self.cache_v[:, 1:, :, :]
+        # self.cache_k[:, :-1, :, :] = self.cache_k[:, 1:, :, :]  # not efficient, sometimes error happens
+        # self.cache_v[:, :-1, :, :] = self.cache_v[:, 1:, :, :]  # not efficient, sometimes error happens
+        self.cache_k = torch.cat(
+            [
+                self.cache_k[:, 1:, :, :],
+                torch.zeros(
+                    (self.args.max_batch_size, self.args.max_seq_len, self.n_kv_heads, self.head_dim),
+                    device=self.cache_k.device
+                )
+            ],
+            dim=1
+        )
+        self.cache_v = torch.cat(
+            [
+                self.cache_v[:, 1:, :, :],
+                torch.zeros(
+                    (self.args.max_batch_size, self.args.max_seq_len, self.n_kv_heads, self.head_dim),
+                    device=self.cache_v.device
+                )
+            ],
+            dim=1
+        )
 
 class InfiniteAttention(Attention):
     def __init__(self, args: ModelArgs):
