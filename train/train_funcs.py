@@ -23,7 +23,7 @@ def st_train_on_epoch(model, raw_model, data_loader, optimizer, device:str, step
             model.require_backward_grad_sync = ((step + 1) % grad_accum_steps == 0)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
             logits = model(x)
-            loss = model.compute_loss(logits, y, tp)
+            loss = raw_model.compute_loss(logits, y, tp)
         loss_accum = loss.detach()
         loss.backward()
         if dp or tp:
@@ -54,7 +54,7 @@ def st_valid_on_epoch(model, raw_model, data_loader, device:str, val_steps:int, 
         x, y = x.to(device), y.to(device)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
             logits = model(x)
-            loss = model.compute_loss(logits, y, tp)
+            loss = raw_model.compute_loss(logits, y, tp)
         loss = loss / val_steps
         val_loss_accum += loss.detach()
     if dp or tp:
@@ -87,7 +87,7 @@ def dpo_train_on_epoch(model, raw_model, data_loader, optimizer, device:str, ste
             loser_values, loser_logits = model(x_loser)
             # compute dpo loss
             # loss = dpo_loss(winner_values.mean(dim=-1), loser_values.mean(dim=-1))
-            loss = model.dpo_loss(winner_values[:, -1], loser_values[:, -1], tp)
+            loss = raw_model.dpo_loss(winner_values[:, -1], loser_values[:, -1], tp)
         loss_accum = loss.detach()
         loss.backward()
         if dp or tp:
@@ -120,7 +120,7 @@ def dpo_valid_on_epoch(model, raw_model, data_loader, device:str, val_steps:int,
             loser_values, loser_logits = model(x_loser)
             # compute dpo loss
             # loss = dpo_loss(winner_values.mean(dim=-1), loser_values.mean(dim=-1))
-            loss = model.dpo_loss(winner_values[:, -1], loser_values[:, -1], tp)
+            loss = raw_model.dpo_loss(winner_values[:, -1], loser_values[:, -1], tp)
         loss = loss / val_steps
         val_loss_accum += loss.detach()
     if dp or tp:
