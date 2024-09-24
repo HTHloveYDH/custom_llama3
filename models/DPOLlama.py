@@ -25,13 +25,3 @@ class DPOLlama(nn.Module):
             logits_diff = (values_winner - values_loser) / beta
             loss = -F.logsigmoid(logits_diff).mean()
         return loss
-
-    def train(self, mode: bool = True):
-        self.training = True
-        self.llm.train(mode)
-        self.value_head.train(mode)
-
-    def eval(self):
-        self.training = False
-        self.llm.eval()
-        self.value_head.eval()
