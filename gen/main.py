@@ -9,7 +9,7 @@ from dist.distribute import init_dist, ternimate_dist
 from data_pipeline.get_tokenizer import get_tokenizer
 from models.get_model import get_model
 # from gen.demo import generate
-from gen.gen_funcs import generate
+from gen.gen_funcs import generate, cot_generate
 from utils.load_config import load_config_from_json as load_configs
 
 
@@ -23,6 +23,7 @@ def main():
     tp_size = dist_config['tensor_parallel_size']
     # generation configs
     dialog = gen_config['dialog']
+    cot = gen_config['cot']
     seed = gen_config['seed']  # defaults to 1337
     gen_batch_size = gen_config['gen_batch_size']
     gen_len = gen_config['gen_len']
@@ -55,10 +56,15 @@ def main():
     # _, _ = generate(model, prompt, gen_batch_size, gen_len, temperature, top_p, device=device)
     # get tokenizer
     tokenizer, chat_format = get_tokenizer(tokenizer_path)
-    return_messages = generate(
-        model, tokenizer, chat_format, prompt, device, gen_batch_size, gen_len, dialog, 
-        dp_global_rank
-    )
+    if cot:
+        steps, think_time = cot_generate(
+            model, tokenizer, chat_format, prompt, device, gen_len, dp_global_rank
+        )
+    else:
+        return_messages = generate(
+            model, tokenizer, chat_format, prompt, device, gen_batch_size, gen_len, dialog, 
+            dp_global_rank
+        )
     ternimate_dist(dist_type)
 
 
