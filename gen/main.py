@@ -85,7 +85,6 @@ def main():
         print(f"Standard Deviation: {std_dev:.4f} seconds")
         print(f"Minimum Time: {min_time:.4f} seconds")
         print(f"Maximum Time: {max_time:.4f} seconds")
-
     ternimate_dist(dist_type)
 
 
