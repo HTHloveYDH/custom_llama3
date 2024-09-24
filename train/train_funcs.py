@@ -64,7 +64,7 @@ def st_valid_on_epoch(model, raw_model, data_loader, device:str, val_steps:int, 
         print(f'validation loss: {val_loss_accum.item():.4f}')
         # optionally write model checkpoints
         log_dir = os.path.join('.', 'log', 'ckpt')
-        save_curr_model_path = os.path.join(log_dir, f'model_epoch:_{epoch}.pt')
+        save_curr_model_path = os.path.join(log_dir, f'model_epoch_{epoch}.pt')
         _save_ckpt(raw_model, epoch, val_loss_accum.item(), save_curr_model_path)
         checkpoint_path = os.path.join('.', 'ckpt', f'model.pt')
         _save_ckpt(raw_model, epoch, val_loss_accum.item(), checkpoint_path)
@@ -130,7 +130,7 @@ def dpo_valid_on_epoch(model, raw_model, data_loader, device:str, val_steps:int,
         print(f'validation loss: {val_loss_accum.item():.4f}')
         # optionally write model checkpoints
         log_dir = os.path.join('.', 'log', 'ckpt')
-        save_curr_model_path = os.path.join(log_dir, f'model_epoch:_{epoch}.pt')
+        save_curr_model_path = os.path.join(log_dir, f'model_epoch_{epoch}.pt')
         _save_ckpt(raw_model, epoch, val_loss_accum.item(), save_curr_model_path)
         checkpoint_path = os.path.join('.', 'ckpt', f'model.pt')
         _save_ckpt(raw_model, epoch, val_loss_accum.item(), checkpoint_path)
