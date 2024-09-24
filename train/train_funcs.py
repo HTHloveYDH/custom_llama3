@@ -7,7 +7,7 @@ import torch.distributed as dist
 from utils.get_device_type import get_device_type
 
 
-def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch:int, \
+def st_train_on_epoch(model, raw_model, data_loader, optimizer, device:str, steps_per_epoch:int, \
                       grad_accum_steps:int, epoch:int, log_interval:int, dp:bool, tp:bool, \
                       master_process:bool):
     model.train()
@@ -69,7 +69,7 @@ def st_valid_on_epoch(model, raw_model, data_loader, device:str, val_steps:int, 
         checkpoint_path = os.path.join('.', 'ckpt', f'model.pt')
         _save_ckpt(raw_model, epoch, val_loss_accum.item(), checkpoint_path)
 
-def dpo_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch:int, \
+def dpo_train_on_epoch(model, raw_model, data_loader, optimizer, device:str, steps_per_epoch:int, \
                        grad_accum_steps:int, epoch:int, log_interval:int, dp:bool, tp:bool, \
                        master_process:bool):
     model.train()
