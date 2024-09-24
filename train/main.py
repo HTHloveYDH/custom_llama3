@@ -122,8 +122,8 @@ def main(dp_local_rank=0, torch_mp_launch=False):
         print(f'epoch: {epoch} / {epochs}:')
         # train llm for one epoch
         train_on_epoch(
-            model, train_data_loader, optimizer, device, steps_per_epoch, grad_accum_steps, epoch,
-            log_interval, dp, tp, master_process
+            model, raw_model, train_data_loader, optimizer, device, steps_per_epoch, grad_accum_steps, 
+            epoch, log_interval, dp, tp, master_process
         )
         # validate current weights on validation dataset shard of current process
         valid_on_epoch(
