@@ -36,7 +36,6 @@ def main(dp_local_rank=0, torch_mp_launch=False):
     assert dist_type in ['ddp', 'fsdp', 'fsdp+tp', 'tp', 'default'], f'distribute strategy: {dist_type} is not supported'
     dp = dist_type in ['ddp', 'fsdp', 'fsdp+tp']
     tp = dist_type in ['fsdp+tp', 'tp']
-    parallel = dp or tp
     dp_size = dist_config['data_parallel_size']
     tp_size = dist_config['tensor_parallel_size']
     # train configs
@@ -124,11 +123,11 @@ def main(dp_local_rank=0, torch_mp_launch=False):
         # train llm for one epoch
         train_on_epoch(
             model, raw_model, train_data_loader, optimizer, device, steps_per_epoch, 
-            grad_accum_steps, epoch, log_interval, parallel, master_process
+            grad_accum_steps, epoch, log_interval, dp, tp, master_process
         )
         # validate current weights on validation dataset shard of current process
         valid_on_epoch(
-            model, raw_model, val_data_loader, device, val_steps, epoch, parallel, master_process
+            model, raw_model, val_data_loader, device, val_steps, epoch, dp, tp, master_process
         )
         # generate sentences to verify current weights in the master process
         if master_process:
