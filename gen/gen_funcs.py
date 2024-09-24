@@ -39,7 +39,7 @@ def generate_tokens(model, tokens:list, gen_batch_size:int, gen_len:int, device:
             # append to the sequence
             xgen = torch.cat((xgen, xcol), dim=1)
     return xgen
-    
+
 def generate(model, tokenizer, chat_format, prompt, device:str, gen_batch_size:int, \
              gen_len:int, dialog:bool, dp_global_rank=0):
     model.eval()
@@ -70,13 +70,13 @@ def get_model_response(model, cot_format, tokenizer, cot_prompt, gen_len:int, is
     # sampling configuration
     for attempt in range(3):
         try:
+            xgen = generate_tokens(model, tokens, 1, gen_len, device, dp_global_rank)
+            assert xgen.size(0) == 1
+            tokens = xgen[0, :gen_len].tolist()
+            response = tokenizer.decode(tokens)
             if is_final_answer:
-                xgen = generate_tokens(model, tokens, 1, gen_len, device, dp_global_rank)
-                response = tokenizer.decode(xgen)
                 return response
             else:
-                xgen = generate_tokens(model, tokens, 1, gen_len, device, dp_global_rank)
-                response = tokenizer.decode(xgen)
                 return json.loads(response)
         except Exception as e:
             if attempt == 2:
