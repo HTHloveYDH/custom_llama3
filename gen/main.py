@@ -27,6 +27,7 @@ def main():
     seed = gen_config['seed']  # defaults to 1337
     gen_batch_size = gen_config['gen_batch_size']
     gen_len = gen_config['gen_len']
+    num_runs = gen_config['num_runs']  # if measure generation time cost, set this value > 1
     if llama3_config['model_type'] in ['llama3_8B', 'llama3_70B', 'llama3_405B']:
         assert gen_batch_size == 32
     else:
@@ -56,14 +57,10 @@ def main():
     # _, _ = generate(model, prompt, gen_batch_size, gen_len, temperature, top_p, device=device)
     # get tokenizer
     tokenizer, chat_format = get_tokenizer(tokenizer_path)
-    
     # Prepare for timing
     generation_times = []
-    num_runs = 5  # Number of times to run the generation for statistical analysis
-
     for _ in range(num_runs):
         start_time = time.time()
-        
         if cot:
             steps, think_time = cot_generate(
                 model, tokenizer, chat_format, prompt, device, gen_len, dp_global_rank
@@ -73,17 +70,14 @@ def main():
                 model, tokenizer, chat_format, prompt, device, gen_batch_size, gen_len, dialog, 
                 dp_global_rank
             )
-        
         end_time = time.time()
         generation_time = end_time - start_time
         generation_times.append(generation_time)
-
     # Calculate statistics
     avg_time = statistics.mean(generation_times)
     std_dev = statistics.stdev(generation_times) if len(generation_times) > 1 else 0
     min_time = min(generation_times)
     max_time = max(generation_times)
-
     # Print results
     if master_process:
         print(f"Generation Statistics (over {num_runs} runs):")
