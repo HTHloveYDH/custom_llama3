@@ -177,7 +177,7 @@ class Attention(nn.Module):
                 )
             ],
             dim=1
-        )
+        )  # O(1), efficient
         self.cache_v = torch.cat(
             [
                 self.cache_v[:, 1:, :, :],
@@ -187,7 +187,7 @@ class Attention(nn.Module):
                 )
             ],
             dim=1
-        )
+        )  # O(1), efficient
 
 class InfiniteAttention(Attention):
     def __init__(self, args: ModelArgs):
