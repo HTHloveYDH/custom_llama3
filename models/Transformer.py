@@ -6,7 +6,7 @@ from torch.nn import functional as F
 from torch.distributed.tensor.parallel import loss_parallel
 
 from config.ModelArgs import ModelArgs
-from models.modules import RMSNorm, Attention, TransformerBlock
+from models.modules import RMSNorm, Attention, InfiniteAttention, TransformerBlock
 from models.lora import LoRAParametrization
 
 
@@ -140,7 +140,7 @@ class Transformer(nn.Module):
     def train(self, mode: bool = True):
         super().train(mode)
         for module in self.modules():
-            if isinstance(module, Attention):
+            if isinstance(module, (Attention, InfiniteAttention)):
                 if mode:
                     module.disable_kv_cache()
                 else:
@@ -150,6 +150,6 @@ class Transformer(nn.Module):
     def eval(self):
         super().eval()
         for module in self.modules():
-            if isinstance(module, Attention):
+            if isinstance(module, (Attention, InfiniteAttention)):
                 module.enable_kv_cache()
                 module.precompute_freqs_cis(False)
