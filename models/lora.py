@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.utils.parametrize as parametrize
 
 
+'''reference url: https://github.com/hkproj/pytorch-lora'''
 class LoRAParametrization(nn.Module):
     def __init__(self, layer:nn.Module, rank=1, alpha=1, device='cpu'):
         super().__init__()
