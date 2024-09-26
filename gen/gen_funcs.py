@@ -96,9 +96,9 @@ def cot_generate(model, tokenizer, cot_format, prompt:str, device:str, gen_len:i
 Example of a valid JSON response:
 ```json
 {
-    'title': 'Identifying Key Information',
-    'content': 'To begin solving this problem, we need to carefully examine the given information and identify the crucial elements that will guide our solution process. This involves...',
-    'next_action': 'continue'
+    "title": "Identifying Key Information",
+    "content": "To begin solving this problem, we need to carefully examine the given information and identify the crucial elements that will guide our solution process. This involves...",
+    "next_action": "continue"
 }```
 '''},
         {'role': 'user', 'content': prompt},
