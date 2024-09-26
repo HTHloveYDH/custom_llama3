@@ -82,13 +82,9 @@ class Attention(nn.Module):
         xv = xv.view(bsz, seq_len, self.n_kv_heads, self.head_dim)  # xv [bsz, seq_len, n_kv_heads, head_dim]
         # training mode: without kv-cache
         if self.training:
-            # compute rotation matrix
-            freqs_cis = RoPE.precompute_freqs_cis(
-                self.head_dim, self.args.max_seq_len, self.args.rope_theta, x.device
-            )
             # and apply RoPE to xq and xk
             # xq shape: [bsz,seq_len, n_heads, head_dim], xk shape: [bsz,seq_len, n_heads, head_dim]
-            xq, xk = RoPE.apply_rotary_emb(xq, xk, freqs_cis)
+            xq, xk = RoPE.apply_rotary_emb(xq, xk, self.freqs_cis)
             # shape: [bsz, seq_len, n_heads, head_dim]
             keys = Attention.repeat_kv(xk, self.n_rep)
             # shape: [bsz, seq_len, n_heads, head_dim]
@@ -98,12 +94,9 @@ class Attention(nn.Module):
             mask = torch.triu(mask, diagonal=1).to(x)
         # inference mode: with kv-cache
         else:
-            freqs_cis = RoPE.precompute_freqs_cis(
-                self.head_dim, self.args.max_seq_len * 2, self.args.rope_theta, x.device
-            )  # (use 2x max sequence length to be safe)
-            # freqs_cis = freqs_cis[start_pos:start_pos + seq_len]
+            # freqs_cis = self.freqs_cis[start_pos:start_pos + seq_len]
             start_pos_ = start_pos % (self.args.max_seq_len * 2)
-            freqs_cis = freqs_cis[start_pos_:start_pos_ + seq_len]
+            freqs_cis = self.freqs_cis[start_pos_:start_pos_ + seq_len]
             # apply RoPE to query (xq) and value (xv)
             xq, xk = RoPE.apply_rotary_emb(xq, xk, freqs_cis)
             # shift cache_k, cache_v if necessary
@@ -153,6 +146,19 @@ class Attention(nn.Module):
             (self.args.max_batch_size, self.args.max_seq_len, self.n_kv_heads, self.head_dim),
             device=self.wq.weight.device
         )
+    
+    def precompute_freqs_cis(self, mode:bool):
+        # compute rotation matrix
+        if mode:
+            self.freqs_cis = RoPE.precompute_freqs_cis(
+                self.head_dim, self.args.max_seq_len, self.args.rope_theta, self.wq.weight.device
+            )
+        else:
+            # Note that self.params.max_seq_len is multiplied by 2 because the token limit for the Llama 2 generation of models is 4096. 
+            # Adding this multiplier instead of using 4096 directly allows for dynamism of token lengths while training or fine-tuning.
+            self.freqs_cis = RoPE.precompute_freqs_cis(
+                self.head_dim, self.args.max_seq_len * 2, self.args.rope_theta, self.wq.weight.device
+            )  # (use 2x max sequence length to be safe)    
 
     @staticmethod
     def repeat_kv(x:torch.Tensor, n_rep:int) -> torch.Tensor:
@@ -225,13 +231,9 @@ class InfiniteAttention(Attention):
         xv = xv.view(bsz, seq_len, self.n_kv_heads, self.head_dim)  # xv [bsz, seq_len, n_kv_heads, head_dim]
         # training mode: without kv-cache
         if self.training:
-            # compute rotation matrix
-            freqs_cis = RoPE.precompute_freqs_cis(
-                self.head_dim, self.args.max_seq_len, self.args.rope_theta, x.device
-            )
             # and apply RoPE to xq and xk
             # xq shape: [bsz,seq_len, n_heads, head_dim], xk shape: [bsz,seq_len, n_heads, head_dim]
-            xq, xk = RoPE.apply_rotary_emb(xq, xk, freqs_cis)
+            xq, xk = RoPE.apply_rotary_emb(xq, xk, self.freqs_cis)
             # shape: [bsz, seq_len, n_heads, head_dim]
             keys = Attention.repeat_kv(xk, self.n_rep)
             # shape: [bsz, seq_len, n_heads, head_dim]
@@ -241,12 +243,9 @@ class InfiniteAttention(Attention):
             mask = torch.triu(mask, diagonal=1).to(x)
         # inference mode: with kv-cache
         else:
-            freqs_cis = RoPE.precompute_freqs_cis(
-                self.head_dim, self.args.max_seq_len * 2, self.args.rope_theta, x.device
-            )
-            # freqs_cis = freqs_cis[start_pos:start_pos + seq_len]
+            # freqs_cis = self.freqs_cis[start_pos:start_pos + seq_len]
             start_pos_ = start_pos % (self.args.max_seq_len * 2)
-            freqs_cis = freqs_cis[start_pos_:start_pos_ + seq_len]
+            freqs_cis = self.freqs_cis[start_pos_:start_pos_ + seq_len]
             # apply RoPE to query (xq) and value (xv)
             xq, xk = RoPE.apply_rotary_emb(xq, xk, freqs_cis)
             # shift cache_k, cache_v if necessary
