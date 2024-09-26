@@ -7,6 +7,7 @@ from torch.nn import functional as F
 from gen.rag import query_database
 from utils.get_device_type import get_device_type
 
+
 def generate_tokens(model, tokens:list, gen_batch_size:int, gen_len:int, device:str, \
                     dp_global_rank:int):
     assert isinstance(tokens, list)
@@ -112,7 +113,7 @@ Example of a valid JSON response:
     while True:
         start_time = time.time()
         step_data = get_model_response(
-            model, cot_format, tokenizer, cot_prompt, gen_len // 4, False, device, dp_global_rank
+            model, cot_format, tokenizer, cot_prompt, gen_len // 8, False, device, dp_global_rank
         )  # json format
         end_time = time.time()
         think_time = end_time - start_time
