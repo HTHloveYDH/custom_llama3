@@ -51,11 +51,12 @@ def generate(model, tokenizer, chat_format, prompt, device:str, gen_batch_size:i
     else:
         assert isinstance(prompt, str)  # 'Hello, I am a student.'
         tokens = tokenizer.encode(prompt, bos=True, eos=True)  # python <class 'list'>
+    start_gen_pos = len(tokens)
     xgen = generate_tokens(model, tokens, gen_batch_size, gen_len, device, dp_global_rank)
     return_messages = []
     # print the generated text
     for i in range(gen_batch_size):
-        tokens = xgen[i, :gen_len].tolist()
+        tokens = xgen[i, start_gen_pos:gen_len].tolist()
         decoded = tokenizer.decode(tokens)
         print(f'[generation text] rank {dp_global_rank} sample {i}: {decoded}')
         if dialog:
@@ -68,12 +69,13 @@ def generate(model, tokenizer, chat_format, prompt, device:str, gen_batch_size:i
 def get_model_response(model, cot_format, tokenizer, cot_prompt, gen_len:int, is_final_answer:bool, \
                        device:str, dp_global_rank:int):
     tokens = cot_format.encode_dialog_prompt(cot_prompt)  # python <class 'list'>
+    start_gen_pos = len(tokens)
     # sampling configuration
     for attempt in range(3):
         try:
             xgen = generate_tokens(model, tokens, 1, gen_len, device, dp_global_rank)
             assert xgen.size(0) == 1
-            tokens = xgen[0, :gen_len].tolist()
+            tokens = xgen[0, start_gen_pos:gen_len].tolist()
             response = tokenizer.decode(tokens)
             if is_final_answer:
                 return response
