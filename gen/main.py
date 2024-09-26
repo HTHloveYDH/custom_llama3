@@ -9,7 +9,7 @@ from dist.distribute import init_dist, ternimate_dist
 from data_pipeline.get_tokenizer import get_tokenizer
 from models.get_model import get_model
 # from gen.demo import generate
-from gen.gen_funcs import generate, cot_generate
+from gen.gen_funcs import generate, cot_generate, rag_generate
 from utils.load_config import load_config_from_json as load_configs
 
 
@@ -24,6 +24,10 @@ def main():
     # generation configs
     dialog = gen_config['dialog']
     cot = gen_config['cot']
+    rag = gen_config['rag']
+    assert not (cot and rag), "'chain of thought' and 'retrive augmentation generation' cannot be true simultaneously."
+    database_path = gen_config['database_path']
+    raw_txt_data_path = gen_config['raw_txt_data_path']
     seed = gen_config['seed']  # defaults to 1337
     gen_batch_size = gen_config['gen_batch_size']
     gen_len = gen_config['gen_len']
@@ -65,9 +69,14 @@ def main():
             steps, think_time = cot_generate(
                 model, tokenizer, chat_format, prompt, device, gen_len, dp_global_rank
             )
+        elif rag:
+            return_messages = rag_generate(
+                model, tokenizer, chat_format, prompt, device, gen_len, dialog, database_path,
+                raw_txt_data_path, dp_global_rank
+            )
         else:
             return_messages = generate(
-                model, tokenizer, chat_format, prompt, device, gen_batch_size, gen_len, dialog, 
+                model, tokenizer, chat_format, prompt, device, gen_batch_size, gen_len, dialog,
                 dp_global_rank
             )
         end_time = time.time()

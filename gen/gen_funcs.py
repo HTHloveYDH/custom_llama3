@@ -4,6 +4,7 @@ import json
 import torch
 from torch.nn import functional as F
 
+from gen.rag import query_database
 from utils.get_device_type import get_device_type
 
 def generate_tokens(model, tokens:list, gen_batch_size:int, gen_len:int, device:str, \
@@ -135,3 +136,23 @@ Example of a valid JSON response:
     # yield steps, total_think_time
     print(f'[cot final generation text] rank {dp_global_rank}: {steps}')
     return steps, total_think_time
+
+def rag_generate(model, tokenizer, rag_format, prompt:str, device:str, gen_len:int, \
+                 dialog:bool, database_path:str, raw_txt_data_path:str, dp_global_rank=0):
+    # retrive from database
+    return_info_list = query_database(prompt, database_path, raw_txt_data_path, 3, verbose=False)
+    if dialog:
+        rag_prompt = [
+            {'role': 'system', 'content': 'You are an expert AI assistant. Please be polite and informative.'},
+            {'role': 'user', 'content': prompt + '\n[CONTEXT]\n'}
+        ]
+        for info in return_info_list:
+            rag_prompt[1]['content'] += info + '\n'
+    else:
+        rag_prompt = prompt + '\n[CONTEXT]\n'
+        for info in return_info_list:
+            rag_prompt += info + '\n'
+    return_messages = generate(
+        model, tokenizer, rag_format, rag_prompt, device, 1, gen_len, dialog, dp_global_rank
+    )
+    return return_messages
