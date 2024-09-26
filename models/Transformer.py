@@ -145,9 +145,11 @@ class Transformer(nn.Module):
                     module.disable_kv_cache()
                 else:
                     module.enable_kv_cache()
+                module.precompute_freqs_cis(mode)
 
     def eval(self):
         super().eval()
         for module in self.modules():
             if isinstance(module, Attention):
                 module.enable_kv_cache()
+                module.precompute_freqs_cis(False)
