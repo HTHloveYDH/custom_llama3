@@ -60,6 +60,7 @@ def main(dp_local_rank=0, torch_mp_launch=False):
     warmup_steps = train_config['warmup_steps']
     seed = train_config['seed']  # defaults to 1337
     gen_batch_size = train_config['gen_batch_size']
+    assert gen_batch_size == max_batch_size
     gen_len = train_config['gen_len']
     temperature = train_config['temperature']
     top_p = train_config['top_p']
