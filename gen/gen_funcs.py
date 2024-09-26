@@ -59,7 +59,7 @@ def generate(model, tokenizer, chat_format, prompt, device:str, gen_batch_size:i
         decoded = tokenizer.decode(tokens)
         print(f'[generation text] rank {dp_global_rank} sample {i}: {decoded}')
         if dialog:
-            return_messages.append({'generation', {'role': 'assistant', 'content': decoded}})
+            return_messages.append({'generation': {'role': 'assistant', 'content': decoded}})
         else:
             return_messages.append({'generation': decoded})
     return return_messages
