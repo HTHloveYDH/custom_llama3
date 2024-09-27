@@ -6,7 +6,7 @@ from torch.nn import functional as F
 from torch.distributed.tensor.parallel import loss_parallel
 
 from config.ModelArgs import ModelArgs
-from models.modules import RMSNorm, Attention, InfiniteAttention, TransformerBlock
+from models.modules import RoPE, RMSNorm, Attention, InfiniteAttention, TransformerBlock
 from models.lora import LoRAParametrization
 
 
@@ -19,14 +19,15 @@ class Transformer(nn.Module):
         for layer_id in range(params.n_layers):
             self.layers.append(TransformerBlock(args=params))    
         self.norm = RMSNorm(params.dim, eps=params.norm_eps)    
-        self.output = nn.Linear(params.dim, params.vocab_size, bias=False)  
+        self.output = nn.Linear(params.dim, params.vocab_size, bias=False)
  
     def forward(self, x, start_pos=0):
         # start_pos: start posotion in inference mode
         # x shape: [bsz, seq_len] -> h shape: [bsz, seq_len, dim]  
-        h = self.tok_embeddings(x)     
+        h = self.tok_embeddings(x)
+        self.freqs_cis = self.freqs_cis.to(h.device)
         for layer in self.layers:  
-            h = layer(h, start_pos)   
+            h = layer(h, start_pos, self.freqs_cis)   
         h = self.norm(h)
         # self.output maps embedding to logits with length of vocabulary  
         # h shape: [bsz, seq_len, dim] -> logits shape: [bsz, seq_len, vocab_size]  
@@ -41,6 +42,21 @@ class Transformer(nn.Module):
             else:
                 loss = F.cross_entropy(pred.view(-1, self.params.vocab_size), target.view(-1))
         return loss
+
+    def precompute_freqs_cis(self, mode:bool):
+        # compute rotation matrix
+        if mode:
+            self.freqs_cis = RoPE.precompute_freqs_cis(
+                self.params.dim // self.params.n_heads, self.params.max_seq_len, 
+                self.params.rope_theta
+            )
+        else:
+            # Note that self.params.max_seq_len is multiplied by 2 because the token limit for the Llama 2 generation of models is 4096. 
+            # Adding this multiplier instead of using 4096 directly allows for dynamism of token lengths while training or fine-tuning.
+            self.freqs_cis = RoPE.precompute_freqs_cis(
+                self.params.dim // self.params.n_heads, self.params.max_seq_len * 2, 
+                self.params.rope_theta
+            )  # (use 2x max sequence length to be safe)    
 
     @staticmethod
     def create_llama_model(llama_config:dict):
@@ -145,11 +161,11 @@ class Transformer(nn.Module):
                     module.disable_kv_cache()
                 else:
                     module.enable_kv_cache()
-                module.precompute_freqs_cis(mode)
+        self.precompute_freqs_cis(mode)
 
     def eval(self):
         super().eval()
         for module in self.modules():
             if isinstance(module, (Attention, InfiniteAttention)):
                 module.enable_kv_cache()
-                module.precompute_freqs_cis(False)
+        self.precompute_freqs_cis(False)

@@ -20,7 +20,7 @@ class RoPE:
         return freqs_cis
 
     @staticmethod
-    def reshape_for_broadcast(freqs_cis, x):
+    def reshape_for_broadcast(freqs_cis: torch.Tensor, x: torch.Tensor):
         ndim = x.ndim
         assert 0 <= 1 < ndim
         assert freqs_cis.shape == (x.shape[1], x.shape[-1]), 'Last two dimensions of freqs_cis need to be compatible with x.'
@@ -48,7 +48,7 @@ class RMSNorm(nn.Module):
     def _norm(self, x):
         return x * torch.rsqrt(x.pow(2).mean(dim=-1, keepdim=True) + self.eps)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         # shape: x[bs,seq,dim]
         output = self._norm(x.float()).type_as(x)
         # shape: x[bs,seq,dim] -> x_norm[bs,seq,dim]
@@ -68,7 +68,7 @@ class Attention(nn.Module):
         self.wv = nn.Linear(self.dim, self.n_kv_heads * self.head_dim, bias=False)
         self.wo = nn.Linear(self.n_heads * self.head_dim, self.dim, bias=False)
 
-    def forward(self, x: torch.Tensor, start_pos):
+    def forward(self, x: torch.Tensor, start_pos: int, freqs_cis: torch.Tensor):
         # x shape: [bsz, seq_len, dim]
         bsz, seq_len, _ = x.shape
         # causal mask is necessary in training mode
@@ -84,7 +84,7 @@ class Attention(nn.Module):
         if self.training:
             # and apply RoPE to xq and xk
             # xq shape: [bsz,seq_len, n_heads, head_dim], xk shape: [bsz,seq_len, n_heads, head_dim]
-            xq, xk = RoPE.apply_rotary_emb(xq, xk, self.freqs_cis)
+            xq, xk = RoPE.apply_rotary_emb(xq, xk, freqs_cis)
             # shape: [bsz, seq_len, n_heads, head_dim]
             keys = Attention.repeat_kv(xk, self.n_rep)
             # shape: [bsz, seq_len, n_heads, head_dim]
@@ -94,11 +94,11 @@ class Attention(nn.Module):
             mask = torch.triu(mask, diagonal=1).to(x)
         # inference mode: with kv-cache
         else:
-            # freqs_cis = self.freqs_cis[start_pos:start_pos + seq_len]
+            # freqs_cis_ = freqs_cis[start_pos:start_pos + seq_len]
             start_pos_ = start_pos % (self.args.max_seq_len * 2)
-            freqs_cis = self.freqs_cis[start_pos_:start_pos_ + seq_len]
+            freqs_cis_ = freqs_cis[start_pos_:start_pos_ + seq_len]
             # apply RoPE to query (xq) and value (xv)
-            xq, xk = RoPE.apply_rotary_emb(xq, xk, freqs_cis)
+            xq, xk = RoPE.apply_rotary_emb(xq, xk, freqs_cis_)
             # shift cache_k, cache_v if necessary
             if start_pos % self.args.max_seq_len == 0:
                 self._shift_cache()
@@ -146,19 +146,6 @@ class Attention(nn.Module):
             (self.args.max_batch_size, self.args.max_seq_len, self.n_kv_heads, self.head_dim),
             device=self.wq.weight.device
         )
-    
-    def precompute_freqs_cis(self, mode:bool):
-        # compute rotation matrix
-        if mode:
-            self.freqs_cis = RoPE.precompute_freqs_cis(
-                self.head_dim, self.args.max_seq_len, self.args.rope_theta, self.wq.weight.device
-            )
-        else:
-            # Note that self.params.max_seq_len is multiplied by 2 because the token limit for the Llama 2 generation of models is 4096. 
-            # Adding this multiplier instead of using 4096 directly allows for dynamism of token lengths while training or fine-tuning.
-            self.freqs_cis = RoPE.precompute_freqs_cis(
-                self.head_dim, self.args.max_seq_len * 2, self.args.rope_theta, self.wq.weight.device
-            )  # (use 2x max sequence length to be safe)    
 
     @staticmethod
     def repeat_kv(x:torch.Tensor, n_rep:int) -> torch.Tensor:
@@ -217,7 +204,7 @@ class InfiniteAttention(Attention):
             'z', torch.zeros(self.args.max_batch_size, self.n_heads, self.head_dim, 1)
         )
 
-    def forward(self, x: torch.Tensor, start_pos):
+    def forward(self, x: torch.Tensor, start_pos: int, freqs_cis: torch.Tensor):
         # x shape: [bsz, seq_len, dim]
         bsz, seq_len, _ = x.shape
         # causal mask is necessary in training mode
@@ -233,7 +220,7 @@ class InfiniteAttention(Attention):
         if self.training:
             # and apply RoPE to xq and xk
             # xq shape: [bsz,seq_len, n_heads, head_dim], xk shape: [bsz,seq_len, n_heads, head_dim]
-            xq, xk = RoPE.apply_rotary_emb(xq, xk, self.freqs_cis)
+            xq, xk = RoPE.apply_rotary_emb(xq, xk, freqs_cis)
             # shape: [bsz, seq_len, n_heads, head_dim]
             keys = Attention.repeat_kv(xk, self.n_rep)
             # shape: [bsz, seq_len, n_heads, head_dim]
@@ -243,11 +230,11 @@ class InfiniteAttention(Attention):
             mask = torch.triu(mask, diagonal=1).to(x)
         # inference mode: with kv-cache
         else:
-            # freqs_cis = self.freqs_cis[start_pos:start_pos + seq_len]
+            # freqs_cis_ = freqs_cis[start_pos:start_pos + seq_len]
             start_pos_ = start_pos % (self.args.max_seq_len * 2)
-            freqs_cis = self.freqs_cis[start_pos_:start_pos_ + seq_len]
+            freqs_cis_ = freqs_cis[start_pos_:start_pos_ + seq_len]
             # apply RoPE to query (xq) and value (xv)
-            xq, xk = RoPE.apply_rotary_emb(xq, xk, freqs_cis)
+            xq, xk = RoPE.apply_rotary_emb(xq, xk, freqs_cis_)
             # shift cache_k, cache_v if necessary
             if start_pos % self.args.max_seq_len == 0:
                 self._shift_cache()
@@ -316,7 +303,7 @@ class FeedForward(nn.Module):
         self.w2 = nn.Linear(hidden_dim, self.dim, bias=False)
         self.w3 = nn.Linear(self.dim, hidden_dim, bias=False)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         # shape: [bsz,seq_len,dim]
         return self.w2(F.silu(self.w1(x)) * self.w3(x))
 
@@ -332,12 +319,12 @@ class TransformerBlock(nn.Module):
         self.ff_norm = RMSNorm(dim=args.dim, eps=args.norm_eps)
         self.feedforward=FeedForward(args.dim, 4*args.dim, args.multiple_of, args.ffn_dim_multiplier)
 
-    def forward(self, x, start_pos):
+    def forward(self, x: torch.Tensor, start_pos: int, freqs_cis: torch.Tensor):
         # start_pos: start posotion in inference mode
         # 1) input embedding to attention_norm,
         #    and attention_norm output is transfered to attention
         # 2) add attention output to embedding (before attention_norm)
-        h = x + self.attention(self.attention_norm(x), start_pos)
+        h = x + self.attention(self.attention_norm(x), start_pos, freqs_cis)
         # 1) attention output is transfered to ff_norm
         #    then ff_norm output is transfered to feedforward
         # 2) add feedforward output to attention (before ff_norm)

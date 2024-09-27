@@ -1,3 +1,5 @@
+import os
+
 import faiss
 from sentence_transformers import SentenceTransformer
 
@@ -17,7 +19,7 @@ def init_rag_vector_database(raw_txt_data_path:str, \
     # update vector indices
     index.add(embeddings.astype('float32'))
     # save database
-    faiss.write_index(index, 'vector_index.faiss')
+    faiss.write_index(index, os.path.join('.', 'rag_database', 'vector_index.faiss'))
     return index, documents, sentence_encoder
 
 def restore_rag_vector_database(database_path:str, raw_txt_data_path:str, \
