@@ -12,29 +12,29 @@ from models.lora import LoRAParametrization
 
 class Transformer(nn.Module):
     def __init__(self, params: ModelArgs):
-        super().__init__()    
-        self.params = params   
-        self.tok_embeddings = nn.Embedding(params.vocab_size, params.dim)  
-        self.layers = nn.ModuleList()  
+        super().__init__()
+        self.params = params
+        self.tok_embeddings = nn.Embedding(params.vocab_size, params.dim)
+        self.layers = nn.ModuleList()
         for layer_id in range(params.n_layers):
-            self.layers.append(TransformerBlock(args=params))    
-        self.norm = RMSNorm(params.dim, eps=params.norm_eps)    
+            self.layers.append(TransformerBlock(args=params))
+        self.norm = RMSNorm(params.dim, eps=params.norm_eps)
         self.output = nn.Linear(params.dim, params.vocab_size, bias=False)
- 
+
     def forward(self, x, start_pos=0):
         # start_pos: start posotion in inference mode
-        # x shape: [bsz, seq_len] -> h shape: [bsz, seq_len, dim]  
+        # x shape: [bsz, seq_len] -> h shape: [bsz, seq_len, dim]
         h = self.tok_embeddings(x)
         self.freqs_cis = self.freqs_cis.to(h.device)
-        for layer in self.layers:  
-            h = layer(h, start_pos, self.freqs_cis)   
+        for layer in self.layers:
+            h = layer(h, start_pos, self.freqs_cis)
         h = self.norm(h)
-        # self.output maps embedding to logits with length of vocabulary  
-        # h shape: [bsz, seq_len, dim] -> logits shape: [bsz, seq_len, vocab_size]  
-        logits = self.output(h).float()  
+        # self.output maps embedding to logits with length of vocabulary
+        # h shape: [bsz, seq_len, dim] -> logits shape: [bsz, seq_len, vocab_size]
+        logits = self.output(h).float()
         return logits
 
-    def compute_loss(self, pred, target, tp:bool):  
+    def compute_loss(self, pred, target, tp:bool):
         if target is not None:
             if tp:
                 with loss_parallel():
@@ -47,33 +47,33 @@ class Transformer(nn.Module):
         # compute rotation matrix
         if mode:
             self.freqs_cis = RoPE.precompute_freqs_cis(
-                self.params.dim // self.params.n_heads, self.params.max_seq_len, 
+                self.params.dim // self.params.n_heads, self.params.max_seq_len,
                 self.params.rope_theta
             )
         else:
-            # Note that self.params.max_seq_len is multiplied by 2 because the token limit for the Llama 2 generation of models is 4096. 
+            # Note that self.params.max_seq_len is multiplied by 2 because the token limit for the Llama 2 generation of models is 4096.
             # Adding this multiplier instead of using 4096 directly allows for dynamism of token lengths while training or fine-tuning.
             self.freqs_cis = RoPE.precompute_freqs_cis(
-                self.params.dim // self.params.n_heads, self.params.max_seq_len * 2, 
+                self.params.dim // self.params.n_heads, self.params.max_seq_len * 2,
                 self.params.rope_theta
-            )  # (use 2x max sequence length to be safe)    
+            )  # (use 2x max sequence length to be safe)
 
     @staticmethod
     def create_llama_model(llama_config:dict):
         args_map = {
             'llama3_8B': dict(
-                dim=4096, n_layers=32, n_heads=32, n_kv_heads=8, vocab_size=128256, 
-                multiple_of=1024, ffn_dim_multiplier=1.3, norm_eps=1e-5, rope_theta=500000.0, 
+                dim=4096, n_layers=32, n_heads=32, n_kv_heads=8, vocab_size=128256,
+                multiple_of=1024, ffn_dim_multiplier=1.3, norm_eps=1e-5, rope_theta=500000.0,
                 max_batch_size=32, max_seq_len=2048
             ),  # 8B parameters
             'llama3_70B': dict(
-                dim=8192, n_layers=80, n_heads=64, n_kv_heads=8, vocab_size=128256, 
-                multiple_of=4096, ffn_dim_multiplier=1.3, norm_eps=1e-5, rope_theta=500000.0, 
+                dim=8192, n_layers=80, n_heads=64, n_kv_heads=8, vocab_size=128256,
+                multiple_of=4096, ffn_dim_multiplier=1.3, norm_eps=1e-5, rope_theta=500000.0,
                 max_batch_size=32, max_seq_len=2048
             ),  # 70B parameters
             'llama3_405B': dict(
-                dim=16384, n_layers=126, n_heads=128, n_kv_heads=8, vocab_size=128256, 
-                multiple_of=None, ffn_dim_multiplier=1.3, norm_eps=1e-5, rope_theta=500000.0, 
+                dim=16384, n_layers=126, n_heads=128, n_kv_heads=8, vocab_size=128256,
+                multiple_of=None, ffn_dim_multiplier=1.3, norm_eps=1e-5, rope_theta=500000.0,
                 max_batch_size=32, max_seq_len=2048
             ),  # 405B parameters
         }.get(llama_config['model_type'], {})
@@ -91,8 +91,8 @@ class Transformer(nn.Module):
         model = Transformer.create_llama_model(llama_config)
         state_dict = {}
         weight_files = [
-            os.path.join(llama_config['ckpt_path'], file) 
-            for file in os.listdir(llama_config['ckpt_path']) 
+            os.path.join(llama_config['ckpt_path'], file)
+            for file in os.listdir(llama_config['ckpt_path'])
             if 'safetensors' in file
         ]
         for weight_file in weight_files:
@@ -105,14 +105,27 @@ class Transformer(nn.Module):
 
     @classmethod
     def from_local_pretrained(cls, llama_config:dict):
+        from collections import OrderedDict
         model = Transformer.create_llama_model(llama_config)
+        if llama_config['lora']:
+            assert llama_config['lora_ckpt_path'] is not None
+            model.init_lora(llama_config['lora_rank'], llama_config['lora_alpha'])
+            ckpt = torch.load(llama_config['ckpt_path'])
+            lora_ckpt = torch.load(llama_config['lora_ckpt_path'])
+            full_state_dict = OrderedDict()
+            full_state_dict.update(ckpt['model'])
+            full_state_dict.update(lora_ckpt['model'])
+            model.load_state_dict(full_state_dict)
+            return model
         ckpt = torch.load(llama_config['ckpt_path'])
         model.load_state_dict(ckpt)
         return model
-    
+
     @classmethod
     def from_scratch(cls, llama_config:dict):
         model = Transformer.create_llama_model(llama_config)
+        if llama_config['lora']:
+            model.init_lora(rank=llama_config['lora_rank'], alpha=llama_config['lora_alpha'])
         return model
 
     def _init_weights(self, module):
@@ -125,11 +138,11 @@ class Transformer(nn.Module):
                 torch.nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
-    
+
     @staticmethod
     def init_lora_weights(module, rank=1, alpha=1):
         '''
-        usage: 
+        usage:
             import functools
             init_lora_weights = functools.partial(Transformer.init_lora_weights, rank=rank, alpha=alpha)
             llama3 = Transformer(ModelArgs(**args_map))
@@ -137,10 +150,10 @@ class Transformer(nn.Module):
         '''
         if isinstance(module, nn.Linear):
             LoRAParametrization.inject_lora_weights(module, rank=1, alpha=1)
-    
+
     def init_lora(self, rank=1, alpha=1):
         '''
-        usage: 
+        usage:
             llama3 = Transformer(ModelArgs(**args_map))
             llama3.init_lora(rank=rank, alpha=alpha)
         '''

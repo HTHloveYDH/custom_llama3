@@ -74,6 +74,7 @@ def main(dp_local_rank=0, torch_mp_launch=False):
     # llama3 configs
     tokenizer_path = llama3_config['tokenizer_path']
     use_compile = llama3_config['use_compile']
+    lora = llama3_config['lora']
     llama3_config['align'] = align
     # set up DP (distributed data parallel or fully sharded data parallel) process group.
     # torchrun command sets the env variables RANK, LOCAL_RANK, and WORLD_SIZE
@@ -123,12 +124,13 @@ def main(dp_local_rank=0, torch_mp_launch=False):
         print(f'epoch: {epoch} / {epochs}:')
         # train llm for one epoch
         train_on_epoch(
-            model, raw_model, train_data_loader, optimizer, device, steps_per_epoch, 
+            model, raw_model, train_data_loader, optimizer, device, steps_per_epoch,
             grad_accum_steps, epoch, log_interval, dp, tp, master_process
         )
         # validate current weights on validation dataset shard of current process
         valid_on_epoch(
-            model, raw_model, val_data_loader, device, val_steps, epoch, dp, tp, master_process
+            model, raw_model, val_data_loader, device, val_steps, epoch, dp, tp,
+            master_process, lora
         )
         # generate sentences to verify current weights in the master process
         if master_process:

@@ -31,8 +31,6 @@ def get_model(llama_config:dict, device, dist_type:str, device_mesh:dict):
         model = Llama.from_scratch(llama_config)
     if llama_config['align']:
         model = DPOLlama(model)
-    if llama_config['lora']:
-        model.init_lora(rank=llama_config['lora_rank'], alpha=llama_config['lora_alpha'])
     model.to(device)
     use_compile = False # torch.compile interferes with HellaSwag eval and Generation. TODO fix
     if use_compile:
@@ -52,7 +50,7 @@ def get_model(llama_config:dict, device, dist_type:str, device_mesh:dict):
         model = FSDP(model, device_mesh=dp_mesh, use_orig_params=True)
         # my_auto_wrap_policy = functools.partial(size_based_auto_wrap_policy, min_num_params=100)
         # model = FSDP(
-        #     model, auto_wrap_policy=my_auto_wrap_policy, cpu_offload=CPUOffload(offload_params=True), 
+        #     model, auto_wrap_policy=my_auto_wrap_policy, cpu_offload=CPUOffload(offload_params=True),
         #     device_mesh=dp_mesh, use_orig_params=True
         # )
     print(f'distribute strategy is set to {dist_type}')
