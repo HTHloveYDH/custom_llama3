@@ -64,5 +64,5 @@ def TP(model, tp_mesh, training:bool):
         assert training
         layer_tp_plan = {'value_head': ColwiseParallel()}
         model = parallelize_module(model, tp_mesh, layer_tp_plan)
-        model.llm = llama_TP(model.llm, tp_mesh)
+        model.llm = llama_TP(model.llm, tp_mesh, training)
     return model
