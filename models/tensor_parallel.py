@@ -11,29 +11,19 @@ from models.Transformer import Transformer as Llama
 from models.DPOLlama import DPOLlama
 
 
-def llama_TP(model, dp_mesh, tp_mesh):
+def train_llama_TP(model, tp_mesh):
     # parallelize the first embedding and the last linear out projection
-    if dp_mesh is None:
-        layer_tp_plan = {
-            'tok_embeddings': RowwiseParallel(),
-            'norm': SequenceParallel(),
-            'output': ColwiseParallel(
-                input_layouts=Shard(1),
-                output_layouts=Replicate()
-            ),
-        }
-    else:
-        layer_tp_plan = {
-            'tok_embeddings': RowwiseParallel(
-                input_layouts=Replicate(),
-                output_layouts=Shard(1),
-            ),
-            'norm': SequenceParallel(),
-            'output': ColwiseParallel(
-                input_layouts=Shard(1),
-                output_layouts=Replicate()
-            ),
-        }
+    layer_tp_plan = {
+        'tok_embeddings': RowwiseParallel(
+            input_layouts=Replicate(),
+            output_layouts=Shard(1),
+        ),
+        'norm': SequenceParallel(),
+        'output': ColwiseParallel(
+            input_layouts=Shard(1),
+            output_layouts=Replicate()
+        ),
+    }
     model = parallelize_module(model, tp_mesh, layer_tp_plan)
     for block_id, transformer_block in enumerate(model.layers):
         layer_tp_plan = {
@@ -67,11 +57,15 @@ def llama_TP(model, dp_mesh, tp_mesh):
         )
     return model
 
-def TP(model, dp_mesh, tp_mesh):
+def TP(model, tp_mesh, training:bool):
     if isinstance(model, Llama):
-        model = llama_TP(model, dp_mesh, tp_mesh)
+        if training:
+            model = train_llama_TP(model, tp_mesh)
+        else:
+            model = eval_llama_TP(model, tp_mesh)
     elif isinstance(model, DPOLlama):
-        layer_tp_plan = {'value_head': RowwiseParallel()}
+        assert training
+        layer_tp_plan = {'value_head': ColwiseParallel()}
         model = parallelize_module(model, tp_mesh, layer_tp_plan)
-        model.llm = llama_TP(model.llm, dp_mesh, tp_mesh)
+        model.llm = train_llama_TP(model.llm, tp_mesh)
     return model
