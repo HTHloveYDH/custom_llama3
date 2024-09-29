@@ -317,7 +317,7 @@ class TransformerBlock(nn.Module):
         else:
             self.attention = Attention(args)
         self.ff_norm = RMSNorm(dim=args.dim, eps=args.norm_eps)
-        self.feedforward=FeedForward(args.dim, 4*args.dim, args.multiple_of, args.ffn_dim_multiplier)
+        self.feedforward = FeedForward(args.dim, 4 * args.dim, args.multiple_of, args.ffn_dim_multiplier)
 
     def forward(self, x: torch.Tensor, start_pos: int, freqs_cis: torch.Tensor):
         # start_pos: start posotion in inference mode
