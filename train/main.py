@@ -133,7 +133,7 @@ def main(dp_local_rank=0, torch_mp_launch=False):
             master_process, lora
         )
         # generate sentences to verify current weights in the master process
-        if master_process:
+        if master_process and not tp:
             # _, _ = generate(
             #     model, "Hello, I'm a language model,", gen_batch_size, gen_len, temperature, top_p,
             #     device
