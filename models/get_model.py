@@ -54,5 +54,5 @@ def get_model(llama_config:dict, device, dist_type:str, device_mesh:dict, traini
         #     device_mesh=dp_mesh, use_orig_params=True
         # )
     print(f'distribute strategy is set to {dist_type}')
-    raw_model = model.module if dist_type in ['ddp', 'fsdp'] else model  # always contains the 'raw' unwrapped model
+    raw_model = model.module if dist_type in ['ddp', 'fsdp', 'fsdp+tp'] else model  # always contains the 'raw' unwrapped model
     return model, raw_model
