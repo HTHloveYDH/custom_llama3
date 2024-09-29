@@ -11,7 +11,7 @@ from models.Transformer import Transformer as Llama
 from models.DPOLlama import DPOLlama
 
 
-def train_llama_TP(model, tp_mesh):
+def llama_TP(model, tp_mesh, training:bool):
     # parallelize the first embedding and the last linear out projection
     layer_tp_plan = {
         'tok_embeddings': RowwiseParallel(
@@ -59,13 +59,10 @@ def train_llama_TP(model, tp_mesh):
 
 def TP(model, tp_mesh, training:bool):
     if isinstance(model, Llama):
-        if training:
-            model = train_llama_TP(model, tp_mesh)
-        else:
-            model = eval_llama_TP(model, tp_mesh)
+        model = llama_TP(model, tp_mesh, training)
     elif isinstance(model, DPOLlama):
         assert training
         layer_tp_plan = {'value_head': ColwiseParallel()}
         model = parallelize_module(model, tp_mesh, layer_tp_plan)
-        model.llm = train_llama_TP(model.llm, tp_mesh)
+        model.llm = llama_TP(model.llm, tp_mesh)
     return model
