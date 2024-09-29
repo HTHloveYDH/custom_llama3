@@ -14,9 +14,9 @@ from torch.distributed.fsdp.wrap import (
     wrap,
 )
 
+from dist.tensor_parallel import TP
 from models.Transformer import Transformer as Llama
 from models.DPOLlama import DPOLlama
-from models.tensor_parallel import TP
 
 
 def get_model(llama_config:dict, device, dist_type:str, device_mesh:dict):
