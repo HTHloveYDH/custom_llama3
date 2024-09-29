@@ -29,8 +29,8 @@ def llama_TP(model, tp_mesh, training:bool):
         layer_tp_plan = {
             'attention_norm': SequenceParallel(),
             'attention': PrepareModuleInput(
-                input_layouts=(Shard(1), None),
-                desired_input_layouts=(Replicate(), None),
+                input_layouts=(Shard(1), None, None),
+                desired_input_layouts=(Replicate(), None, None),
             ),
             'attention.wq': ColwiseParallel(),
             'attention.wk': ColwiseParallel(),
