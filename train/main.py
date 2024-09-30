@@ -12,7 +12,7 @@ from data_pipeline.DataLoaderLiteFactory import DataLoaderLiteFactory
 from models.get_model import get_model
 from train.train_funcs import (
     st_train_on_epoch, st_valid_on_epoch, dpo_train_on_epoch, dpo_valid_on_epoch,
-    get_optimizer, resume_from_ckpt
+    resume_from_ckpt
 )
 # from gen.demo import generate
 from gen.gen_funcs import generate

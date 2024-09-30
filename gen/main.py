@@ -15,7 +15,7 @@ from utils.load_config import load_config_from_json as load_configs
 
 def main():
     ''' __________________________________________ setup _____________________________________________ '''
-    llama3_config, gen_config, cloud_config, dist_config = load_configs('gen')
+    llama3_config, gen_config, cloud_config = load_configs('gen')
     # llama3 configs
     parallel_dims = llama3_config['parallel_dims']
     dp, tp, pp = parallel_dims['dp'], parallel_dims['tp'], parallel_dims['pp']
