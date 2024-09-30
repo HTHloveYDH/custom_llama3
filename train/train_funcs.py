@@ -4,6 +4,7 @@ from collections import OrderedDict
 
 import torch
 import torch.distributed as dist
+from torch.distributed.tensor.parallel import loss_parallel
 
 from utils.get_device_type import get_device_type
 
@@ -30,8 +31,12 @@ def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch
             else:
                 loss = model.compute_loss(logits, y, parallel_dims['tp'] > 1, parallel_loss)
         loss_accum = loss.detach()
-        loss.backward()
-        if parallel:
+        if parallel_loss:
+            with loss_parallel():
+                loss.backward()
+        else:
+            loss.backward()
+        if parallel and not parallel_loss:
             dist.all_reduce(loss_accum, op=dist.ReduceOp.AVG)  # all_reduce (mean)
         # update weights at the 'grad_accum_steps'st step of every 'grad_accum_steps' steps
         if (step + 1) % grad_accum_steps == 0:
@@ -66,7 +71,7 @@ def st_valid_on_epoch(model, data_loader, device:str, val_steps:int, epoch:int, 
                 loss = model.compute_loss(logits, y, parallel_dims['tp'] > 1, parallel_loss)
         loss = loss / val_steps
         val_loss_accum += loss.detach()
-    if parallel:
+    if parallel and not parallel_loss:
         dist.all_reduce(val_loss_accum, op=dist.ReduceOp.AVG)  # all_reduce (mean)
         val_loss_tracker.append(val_loss_accum.item())
     if master_process:
@@ -111,8 +116,12 @@ def dpo_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoc
                     winner_values[:, -1], loser_values[:, -1], parallel_dims['tp'] > 1
                 )
         loss_accum = loss.detach()
-        loss.backward()
-        if parallel:
+        if parallel_loss:
+            with loss_parallel():
+                loss.backward()
+        else:
+            loss.backward()
+        if parallel and not parallel_loss:
             dist.all_reduce(loss_accum, op=dist.ReduceOp.AVG)  # all_reduce (mean)
         # update weights at the 'grad_accum_steps'st step of every 'grad_accum_steps' steps
         if (step + 1) % grad_accum_steps == 0:
@@ -154,7 +163,7 @@ def dpo_valid_on_epoch(model, data_loader, device:str, val_steps:int, epoch:int,
                 )
         loss = loss / val_steps
         val_loss_accum += loss.detach()
-    if parallel:
+    if parallel and not parallel_loss:
         dist.all_reduce(val_loss_accum, op=dist.ReduceOp.AVG)  # all_reduce (mean)
         val_loss_tracker.append(val_loss_accum.item())
     if master_process:

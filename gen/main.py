@@ -57,7 +57,7 @@ def main():
     ''' ____________________________________________ test ___________________________________________ '''
     # _, _ = generate(model, prompt, gen_batch_size, gen_len, temperature, top_p, device=device)
     # get global rank on data parallel level
-    dp_global_rank = 0 if device_mesh is None else device_mesh.get('dp', 0)
+    dp_global_rank = 0 if dp == 1 else device_mesh['dp'].get_rank()
     # get tokenizer
     tokenizer, chat_format = get_tokenizer(tokenizer_path)
     # Prepare for timing

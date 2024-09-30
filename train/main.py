@@ -93,7 +93,7 @@ def main():
     # val_data_loader = DemoDataLoader(data_root, max_seq_len, max_batch_size, 'val')
     DataLoaderLite_factory = DataLoaderLiteFactory()
     # get global rank on data parallel level
-    dp_global_rank = 0 if dp == 1 else device_mesh['dp']
+    dp_global_rank = 0 if dp == 1 else device_mesh['dp'].get_rank()
     kwargs = {
         'B': max_batch_size, 'T': max_seq_len, 'process_rank': dp_global_rank,
         'num_processes': dp, 'tokenizer_path': tokenizer_path,
@@ -129,7 +129,7 @@ def main():
             master_process, lora
         )
         # generate sentences to verify current weights in the master process
-        if master_process and not tp > 1 and not pp > 1:
+        if master_process and not tp > 1:
             # _, _ = generate(
             #     model, "Hello, I'm a language model,", gen_batch_size, gen_len, temperature, top_p,
             #     device
