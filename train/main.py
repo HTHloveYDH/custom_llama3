@@ -34,6 +34,8 @@ def main():
     dp, tp, pp = parallel_dims['dp'], parallel_dims['tp'], parallel_dims['pp']
     dp_shard = llama3_config['dp_shard']
     assert not (dp_shard and dp == 1)
+    parallel_loss = llama3_config['parallel_loss']
+    assert not (parallel_loss and tp == 1)
     tokenizer_path = llama3_config['tokenizer_path']
     use_compile = llama3_config['use_compile']
     lora = llama3_config['lora']
@@ -91,7 +93,7 @@ def main():
     # val_data_loader = DemoDataLoader(data_root, max_seq_len, max_batch_size, 'val')
     DataLoaderLite_factory = DataLoaderLiteFactory()
     # get global rank on data parallel level
-    dp_global_rank = 0 if device_mesh is None else device_mesh.get('dp', 0)
+    dp_global_rank = 0 if dp == 1 else device_mesh['dp']
     kwargs = {
         'B': max_batch_size, 'T': max_seq_len, 'process_rank': dp_global_rank,
         'num_processes': dp, 'tokenizer_path': tokenizer_path,
@@ -103,7 +105,7 @@ def main():
 
     ''' ____________________________________ build & compile model ___________________________________ '''
     kwargs = {'learning_rate': learning_rate, 'weight_decay': weight_decay}
-    model, optimizer = get_model(llama3_config, device_mesh, device, training=True, **kwargs)
+    model, optimizer = get_model(llama3_config, device_mesh, True, parallel_loss, **kwargs)
 
     ''' ____________________________________________ train ___________________________________________ '''
     # get tokenizer
@@ -118,12 +120,12 @@ def main():
         print(f'epoch: {epoch} / {epochs}:')
         # train llm for one epoch
         train_on_epoch(
-            model, train_data_loader, optimizer, device, steps_per_epoch,
-            grad_accum_steps, epoch, log_interval, parallel_dims, master_process
+            model, train_data_loader, optimizer, device, steps_per_epoch, grad_accum_steps, 
+            epoch, log_interval, parallel_dims, parallel_loss, master_process
         )
         # validate current weights on validation dataset shard of current process
         valid_on_epoch(
-            model, val_data_loader, device, val_steps, epoch, parallel_dims,
+            model, val_data_loader, device, val_steps, epoch, parallel_dims, parallel_loss, 
             master_process, lora
         )
         # generate sentences to verify current weights in the master process

@@ -41,9 +41,9 @@ def get_model(llama_config:dict, device_mesh:dict, device, training:bool, parall
     if use_compile:
         model = torch.compile(model)
     # parallelism
-    dp_mesh = None if device_mesh is None or device_mesh.get('dp', None) is None else device_mesh['dp']
-    tp_mesh = None if device_mesh is None or device_mesh.get('tp', None) is None else device_mesh['tp']
-    pp_mesh = None if device_mesh is None or device_mesh.get('pp', None) is None else device_mesh['pp']
+    dp_mesh = None if llama_config['parallel_dims']['dp'] == 1 else device_mesh['dp']
+    tp_mesh = None if llama_config['parallel_dims']['tp'] == 1 else device_mesh['tp']
+    pp_mesh = None if llama_config['parallel_dims']['pp'] == 1 else device_mesh['pp']
     if tp_mesh is not None:
         model = TP(model, tp_mesh, training, parallel_loss)
     if pp_mesh is not None:

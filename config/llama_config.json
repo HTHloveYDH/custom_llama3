@@ -17,6 +17,7 @@
         "pp": 1
     }, 
     "dp_shard" : false, 
+    "parallel_loss": false, 
 
     "params": {
         "dim": 256, 

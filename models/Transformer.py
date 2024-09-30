@@ -34,11 +34,14 @@ class Transformer(nn.Module):
         logits = self.output(h).float()
         return logits
 
-    def compute_loss(self, pred, target, tp:bool):
+    def compute_loss(self, pred, target, tp:bool, parallel_loss:bool):
         if target is not None:
             if tp:
-                with loss_parallel():
-                    loss = F.cross_entropy(pred.view(-1, self.params.vocab_size), target.view(-1))
+                if parallel_loss:
+                    with loss_parallel():
+                        loss = F.cross_entropy(pred.view(-1, self.params.vocab_size), target.view(-1))
+                else:
+                    loss = F.cross_entropy(pred.view(-1, pred.size(-1)), target.view(-1))
             else:
                 loss = F.cross_entropy(pred.view(-1, self.params.vocab_size), target.view(-1))
         return loss

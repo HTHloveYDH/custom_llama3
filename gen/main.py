@@ -52,11 +52,11 @@ def main():
     torch.set_float32_matmul_precision('high')
 
     ''' ____________________________________ build & compile model ___________________________________ '''
-    model, raw_model = get_model(llama3_config, device_mesh, device, training=False)
+    model, raw_model = get_model(llama3_config, device_mesh, device, False, False)
 
     ''' ____________________________________________ test ___________________________________________ '''
     # _, _ = generate(model, prompt, gen_batch_size, gen_len, temperature, top_p, device=device)
-    # get global rank n data parallel level
+    # get global rank on data parallel level
     dp_global_rank = 0 if device_mesh is None else device_mesh.get('dp', 0)
     # get tokenizer
     tokenizer, chat_format = get_tokenizer(tokenizer_path)

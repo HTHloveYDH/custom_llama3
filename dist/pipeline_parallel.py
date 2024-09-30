@@ -5,7 +5,7 @@ from models.DPOLlama import DPOLlama
 def llama_PP(model, pp_mesh):
     return model
 
-def TP(model, tp_mesh, training:bool):
+def PP(model, tp_mesh, training:bool):
     if isinstance(model, Llama):
         model = llama_PP(model, tp_mesh, training)
     elif isinstance(model, DPOLlama):

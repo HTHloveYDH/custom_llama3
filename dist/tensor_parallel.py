@@ -12,7 +12,6 @@ from models.DPOLlama import DPOLlama
 
 
 def llama_TP(model, tp_mesh, training:bool, parallel_loss:bool):
-    assert not (parallel_loss and not training)
     # parallelize the first embedding and the last linear out projection
     layer_tp_plan = {
         'tok_embeddings': RowwiseParallel(
@@ -22,7 +21,8 @@ def llama_TP(model, tp_mesh, training:bool, parallel_loss:bool):
         'norm': SequenceParallel(),
         'output': ColwiseParallel(
             input_layouts=Shard(1),
-            output_layouts=Replicate()
+            output_layouts=Shard(-1) if parallel_loss else Replicate(), 
+            use_local_output=not parallel_loss
         ),
     }
     model = parallelize_module(model, tp_mesh, layer_tp_plan)
@@ -58,9 +58,10 @@ def llama_TP(model, tp_mesh, training:bool, parallel_loss:bool):
         )
     return model
 
-def TP(model, tp_mesh, training:bool):
+def TP(model, tp_mesh, training:bool, parallel_loss:bool):
+    assert not (parallel_loss and not training)
     if isinstance(model, Llama):
-        model = llama_TP(model, tp_mesh, training)
+        model = llama_TP(model, tp_mesh, training, parallel_loss)
     elif isinstance(model, DPOLlama):
         # TODO:
         assert training
