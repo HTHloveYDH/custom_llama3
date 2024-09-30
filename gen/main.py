@@ -1,9 +1,9 @@
 import os
 import sys
 import time
+import statistics
 
 import torch
-import statistics
 sys.path.append(os.getcwd())
 from dist.distribute import init_dist, ternimate_dist
 from data_pipeline.get_tokenizer import get_tokenizer
