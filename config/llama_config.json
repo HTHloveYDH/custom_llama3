@@ -11,6 +11,13 @@
     "lora_alpha": 1,
     "lora_rank": 1, 
 
+    "parallel_dims": {
+        "dp": 1, 
+        "tp": 1, 
+        "pp": 1
+    }, 
+    "dp_shard" : false, 
+
     "params": {
         "dim": 256, 
         "n_layers": 6, 

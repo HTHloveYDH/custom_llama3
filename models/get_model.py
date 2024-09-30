@@ -15,11 +15,12 @@ from torch.distributed.fsdp.wrap import (
 )
 
 from dist.tensor_parallel import TP
+from dist.pipeline_parallel import PP
 from models.Transformer import Transformer as Llama
 from models.DPOLlama import DPOLlama
 
 
-def get_model(llama_config:dict, device, dist_type:str, device_mesh:dict, training=True):
+def get_model(llama_config:dict, device_mesh:dict, device, training:bool, parallel_loss:bool, **kwargs):
     assert llama_config['load_weights'] in ['official', 'local', None], f"load weights: {llama_config['load_weights']}  is not supported"
     # create model
     if llama_config['load_weights'] == 'official':
@@ -32,27 +33,35 @@ def get_model(llama_config:dict, device, dist_type:str, device_mesh:dict, traini
     if llama_config['align']:
         model = DPOLlama(model)
     model.to(device)
+    # optimizer
+    optimizer = None
+    if training:
+        optimizer = _get_optimizer(model, **kwargs)
     use_compile = False # torch.compile interferes with HellaSwag eval and Generation. TODO fix
     if use_compile:
         model = torch.compile(model)
-    # tensor parallelism
-    tp_mesh = None if device_mesh is None or device_mesh['tp'].size() == 1 else device_mesh['tp']
-    dp_mesh = None if device_mesh is None or device_mesh['dp'].size() == 1 else device_mesh['dp']
+    # parallelism
+    dp_mesh = None if device_mesh is None or device_mesh.get('dp', None) is None else device_mesh['dp']
+    tp_mesh = None if device_mesh is None or device_mesh.get('tp', None) is None else device_mesh['tp']
+    pp_mesh = None if device_mesh is None or device_mesh.get('pp', None) is None else device_mesh['pp']
     if tp_mesh is not None:
-        model = TP(model, tp_mesh, training)
-    else:
-        dp_mesh = None
+        model = TP(model, tp_mesh, training, parallel_loss)
+    if pp_mesh is not None:
+        model = PP(model, pp_mesh, training)
     # data parallelism
-    if dist_type == 'ddp':
-        model = DDP(model, device_ids=[device])
-    elif dist_type == 'fsdp':
-        # reference: https://pytorch.org/tutorials/intermediate/FSDP_tutorial.html#how-to-use-fsdp
-        model = FSDP(model, device_mesh=dp_mesh, use_orig_params=True)
-        # my_auto_wrap_policy = functools.partial(size_based_auto_wrap_policy, min_num_params=100)
-        # model = FSDP(
-        #     model, auto_wrap_policy=my_auto_wrap_policy, cpu_offload=CPUOffload(offload_params=True),
-        #     device_mesh=dp_mesh, use_orig_params=True
-        # )
-    print(f'distribute strategy is set to {dist_type}')
-    raw_model = model.module if dist_type in ['ddp', 'fsdp', 'fsdp+tp'] else model  # always contains the 'raw' unwrapped model
-    return model, raw_model
+    if llama_config['parallel_dims']['dp'] > 1:
+        if llama_config['dp_shard']:
+            # reference: https://pytorch.org/tutorials/intermediate/FSDP_tutorial.html#how-to-use-fsdp
+            model = FSDP(model, device_mesh=dp_mesh, use_orig_params=True)
+            # my_auto_wrap_policy = functools.partial(size_based_auto_wrap_policy, min_num_params=100)
+            # model = FSDP(
+            #     model, auto_wrap_policy=my_auto_wrap_policy, cpu_offload=CPUOffload(offload_params=True),
+            #     device_mesh=dp_mesh, use_orig_params=True
+            # )
+        else:
+            model = DDP(model, device_ids=[device])
+    # print(f'distribute strategy is set to {dist_type}')
+    return model, optimizer
+
+def _get_optimizer(raw_model, weight_decay:float, learning_rate:float):
+    return torch.optim.Adam(raw_model.parameters())

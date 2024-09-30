@@ -8,26 +8,30 @@ import torch.distributed as dist
 from utils.get_device_type import get_device_type
 
 
-def st_train_on_epoch(model, raw_model, data_loader, optimizer, device:str, steps_per_epoch:int, \
-                      grad_accum_steps:int, epoch:int, log_interval:int, dp:bool, tp:bool, \
+def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch:int, \
+                      grad_accum_steps:int, epoch:int, log_interval:int, parallel_dims:dict, \
                       master_process:bool):
     model.train()
     loss_tracker = []
     device_type = get_device_type(device)
+    parallel = parallel_dims['dp'] > 1 or parallel_dims['tp'] > 1 or parallel_dims['pp'] > 1
     for step in range(steps_per_epoch):
         start_time = time.time()
         loss_accum = 0.0
         # x, y = data_loader.get_batch_data()  # only for demo
         x, y = data_loader.next_batch()
         x, y = x.to(device), y.to(device)
-        if dp or tp:
+        if parallel:
             model.require_backward_grad_sync = ((step + 1) % grad_accum_steps == 0)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
             logits = model(x)
-            loss = raw_model.compute_loss(logits, y, tp)
+            if parallel_dims['dp'] > 1:
+                loss = model.module.compute_loss(logits, y, parallel_dims['tp'] > 1)
+            else:
+                loss = model.compute_loss(logits, y, parallel_dims['tp'] > 1)
         loss_accum = loss.detach()
         loss.backward()
-        if dp or tp:
+        if parallel:
             dist.all_reduce(loss_accum, op=dist.ReduceOp.AVG)  # all_reduce (mean)
         # update weights at the 'grad_accum_steps'st step of every 'grad_accum_steps' steps
         if (step + 1) % grad_accum_steps == 0:
@@ -43,11 +47,12 @@ def st_train_on_epoch(model, raw_model, data_loader, optimizer, device:str, step
             print(f'[train] cost {batch_time}s for one batch')
 
 @torch.no_grad()
-def st_valid_on_epoch(model, raw_model, data_loader, device:str, val_steps:int, epoch:int, \
-                      dp:bool, tp:bool, master_process:bool, lora:bool):
+def st_valid_on_epoch(model, data_loader, device:str, val_steps:int, epoch:int, \
+                      parallel_dims:dict, master_process:bool, lora:bool):
     model.eval()
     val_loss_tracker = []
     device_type = get_device_type(device)
+    parallel = parallel_dims['dp'] > 1 or parallel_dims['tp'] > 1 or parallel_dims['pp'] > 1
     val_loss_accum = 0.0
     for _ in range(val_steps):
         # x, y = data_loader.get_batch_data()  # only for demo
@@ -55,10 +60,13 @@ def st_valid_on_epoch(model, raw_model, data_loader, device:str, val_steps:int, 
         x, y = x.to(device), y.to(device)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
             logits = model(x)
-            loss = raw_model.compute_loss(logits, y, tp)
+            if parallel_dims['dp'] > 1:
+                loss = model.module.compute_loss(logits, y, parallel_dims['tp'] > 1)
+            else:
+                loss = model.compute_loss(logits, y, parallel_dims['tp'] > 1)
         loss = loss / val_steps
         val_loss_accum += loss.detach()
-    if dp or tp:
+    if parallel:
         dist.all_reduce(val_loss_accum, op=dist.ReduceOp.AVG)  # all_reduce (mean)
         val_loss_tracker.append(val_loss_accum.item())
     if master_process:
@@ -66,32 +74,41 @@ def st_valid_on_epoch(model, raw_model, data_loader, device:str, val_steps:int, 
         # optionally write model checkpoints
         log_dir = os.path.join('.', 'log', 'ckpt')
         save_curr_model_path = os.path.join(log_dir, f'model_epoch_{epoch}.pt')
-        _save_ckpt(raw_model, epoch, val_loss_accum.item(), save_curr_model_path, lora)
+        _save_ckpt(model.module, epoch, val_loss_accum.item(), save_curr_model_path, lora)
         checkpoint_path = os.path.join('.', 'ckpt', f'model.pt')
-        _save_ckpt(raw_model, epoch, val_loss_accum.item(), checkpoint_path, lora)
+        _save_ckpt(model.module, epoch, val_loss_accum.item(), checkpoint_path, lora)
 
-def dpo_train_on_epoch(model, raw_model, data_loader, optimizer, device:str, steps_per_epoch:int, \
-                       grad_accum_steps:int, epoch:int, log_interval:int, dp:bool, tp:bool, \
+def dpo_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch:int, \
+                       grad_accum_steps:int, epoch:int, log_interval:int, parallel_dims:dict, \
                        master_process:bool):
     model.train()
     loss_tracker = []
     device_type = get_device_type(device)
+    parallel = parallel_dims['dp'] > 1 or parallel_dims['tp'] > 1 or parallel_dims['pp'] > 1
     for step in range(steps_per_epoch):
         start_time = time.time()
         loss_accum = 0.0
         x_winner, x_loser = data_loader.next_batch()
         x_winner, x_loser = x_winner.to(device), x_loser.to(device)
-        if dp or tp:
+        if parallel:
             model.require_backward_grad_sync = ((step + 1) % grad_accum_steps == 0)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
             winner_values, winner_logits = model(x_winner)
             loser_values, loser_logits = model(x_loser)
             # compute dpo loss
-            # loss = dpo_loss(winner_values.mean(dim=-1), loser_values.mean(dim=-1))
-            loss = raw_model.dpo_loss(winner_values[:, -1], loser_values[:, -1], tp)
+            if parallel_dims['dp'] > 1:
+                # loss = model.module.dpo_loss(winner_values.mean(dim=-1), loser_values.mean(dim=-1))
+                loss = model.module.dpo_loss(
+                    winner_values[:, -1], loser_values[:, -1], parallel_dims['tp'] > 1
+                )
+            else:
+                # loss = model.dpo_loss(winner_values.mean(dim=-1), loser_values.mean(dim=-1))
+                loss = model.dpo_loss(
+                    winner_values[:, -1], loser_values[:, -1], parallel_dims['tp'] > 1
+                )
         loss_accum = loss.detach()
         loss.backward()
-        if dp or tp:
+        if parallel:
             dist.all_reduce(loss_accum, op=dist.ReduceOp.AVG)  # all_reduce (mean)
         # update weights at the 'grad_accum_steps'st step of every 'grad_accum_steps' steps
         if (step + 1) % grad_accum_steps == 0:
@@ -107,11 +124,12 @@ def dpo_train_on_epoch(model, raw_model, data_loader, optimizer, device:str, ste
             print(f'[train] cost {batch_time}s for one batch')
 
 @torch.no_grad()
-def dpo_valid_on_epoch(model, raw_model, data_loader, device:str, val_steps:int, epoch:int, \
-                       dp:bool, tp:bool, master_process:bool, lora:bool):
+def dpo_valid_on_epoch(model, data_loader, device:str, val_steps:int, epoch:int, \
+                       parallel_dims:dict, master_process:bool, lora:bool):
     model.eval()
     val_loss_tracker = []
     device_type = get_device_type(device)
+    parallel = parallel_dims['dp'] > 1 or parallel_dims['tp'] > 1 or parallel_dims['pp'] > 1
     val_loss_accum = 0.0
     for _ in range(val_steps):
         x_winner, x_loser = data_loader.next_batch()
@@ -120,11 +138,19 @@ def dpo_valid_on_epoch(model, raw_model, data_loader, device:str, val_steps:int,
             winner_values, winner_logits = model(x_winner)
             loser_values, loser_logits = model(x_loser)
             # compute dpo loss
-            # loss = dpo_loss(winner_values.mean(dim=-1), loser_values.mean(dim=-1))
-            loss = raw_model.dpo_loss(winner_values[:, -1], loser_values[:, -1], tp)
+            if parallel_dims['dp'] > 1:
+                # loss = model.module.dpo_loss(winner_values.mean(dim=-1), loser_values.mean(dim=-1))
+                loss = model.module.dpo_loss(
+                    winner_values[:, -1], loser_values[:, -1], parallel_dims['tp'] > 1
+                )
+            else:
+                # loss = model.dpo_loss(winner_values.mean(dim=-1), loser_values.mean(dim=-1))
+                loss = model.dpo_loss(
+                    winner_values[:, -1], loser_values[:, -1], parallel_dims['tp'] > 1
+                )
         loss = loss / val_steps
         val_loss_accum += loss.detach()
-    if dp or tp:
+    if parallel:
         dist.all_reduce(val_loss_accum, op=dist.ReduceOp.AVG)  # all_reduce (mean)
         val_loss_tracker.append(val_loss_accum.item())
     if master_process:
@@ -132,12 +158,9 @@ def dpo_valid_on_epoch(model, raw_model, data_loader, device:str, val_steps:int,
         # optionally write model checkpoints
         log_dir = os.path.join('.', 'log', 'ckpt')
         save_curr_model_path = os.path.join(log_dir, f'model_epoch_{epoch}.pt')
-        _save_ckpt(raw_model, epoch, val_loss_accum.item(), save_curr_model_path, lora)
+        _save_ckpt(model.module, epoch, val_loss_accum.item(), save_curr_model_path, lora)
         checkpoint_path = os.path.join('.', 'ckpt', f'model.pt')
-        _save_ckpt(raw_model, epoch, val_loss_accum.item(), checkpoint_path, lora)
-
-def get_optimizer(raw_model, weight_decay:float, learning_rate:float):
-    return torch.optim.Adam(raw_model.parameters())
+        _save_ckpt(model.module, epoch, val_loss_accum.item(), checkpoint_path, lora)
 
 def _save_full_ckpt(model, epoch:int, val_loss_accum:float, checkpoint_path:str):
     checkpoint = {

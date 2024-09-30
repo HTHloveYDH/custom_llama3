@@ -16,11 +16,14 @@ from utils.load_config import load_config_from_json as load_configs
 def main():
     ''' __________________________________________ setup _____________________________________________ '''
     llama3_config, gen_config, cloud_config, dist_config = load_configs('gen')
-    # distribute configs
-    dist_type = dist_config['dist_type']
-    assert dist_type in ['tp', 'default'], f'distribute strategy: {dist_type} is not supported'
-    dp_size = dist_config['data_parallel_size']
-    tp_size = dist_config['tensor_parallel_size']
+    # llama3 configs
+    parallel_dims = llama3_config['parallel_dims']
+    dp, tp, pp = parallel_dims['dp'], parallel_dims['tp'], parallel_dims['pp']
+    dp_shard = llama3_config['dp_shard']
+    assert not (dp_shard and dp == 1)
+    tokenizer_path = llama3_config['tokenizer_path']
+    use_compile = llama3_config['use_compile']
+    llama3_config['align'] = False
     # generation configs
     dialog = gen_config['dialog']
     cot = gen_config['cot']
@@ -39,15 +42,9 @@ def main():
     temperature = gen_config['temperature']
     top_p = gen_config['top_p']
     prompt = gen_config['prompt']
-    # llama3 configs
-    tokenizer_path = llama3_config['tokenizer_path']
-    use_compile = llama3_config['use_compile']
-    llama3_config['align'] = False
     # set up DP (distributed data parallel or fully sharded data parallel).
     # torchrun command sets the env variables RANK, LOCAL_RANK, and WORLD_SIZE
-    dp_global_rank, dp_local_rank, device_mesh, master_process, device, _ = init_dist(
-        dist_type, dp_size, tp_size, False, 0
-    )
+    master_process, device, device_type, device_mesh = init_dist(parallel_dims)
     # set random seed
     torch.manual_seed(seed)
     if torch.cuda.is_available():
@@ -55,10 +52,12 @@ def main():
     torch.set_float32_matmul_precision('high')
 
     ''' ____________________________________ build & compile model ___________________________________ '''
-    model, raw_model = get_model(llama3_config, device, dist_type, device_mesh, False)
+    model, raw_model = get_model(llama3_config, device_mesh, device, training=False)
 
     ''' ____________________________________________ test ___________________________________________ '''
     # _, _ = generate(model, prompt, gen_batch_size, gen_len, temperature, top_p, device=device)
+    # get global rank n data parallel level
+    dp_global_rank = 0 if device_mesh is None else device_mesh.get('dp', 0)
     # get tokenizer
     tokenizer, chat_format = get_tokenizer(tokenizer_path)
     # Prepare for timing
@@ -94,7 +93,7 @@ def main():
         print(f"Standard Deviation: {std_dev:.4f} seconds")
         print(f"Minimum Time: {min_time:.4f} seconds")
         print(f"Maximum Time: {max_time:.4f} seconds")
-    ternimate_dist(dist_type)
+    ternimate_dist(parallel_dims)
 
 
 if __name__ == '__main__':

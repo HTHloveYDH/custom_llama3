@@ -7,11 +7,6 @@
 python train/main.py
 ```
 
-### DDP (FSDP) launch on one node by torch.multiprocessing (e.g. 8 GPUs):
-```bash
-python train/main.py --world_size 8 --torch_mp_launch
-```
-
 ### DDP (FSDP) launch on one node by torchrun (e.g. 8 GPUs):
 ```bash
 torchrun --standalone --nproc_per_node=8 train/main.py

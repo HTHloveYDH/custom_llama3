@@ -58,8 +58,8 @@ class Transformer(nn.Module):
                 self.params.rope_theta
             )  # (use 2x max sequence length to be safe)
 
-    @staticmethod
-    def create_llama_model(llama_config:dict):
+    @classmethod
+    def create_llama_model(cls, llama_config:dict):
         args_map = {
             'llama3_8B': dict(
                 dim=4096, n_layers=32, n_heads=32, n_kv_heads=8, vocab_size=128256,
@@ -81,11 +81,10 @@ class Transformer(nn.Module):
         if not args_map:
             args_map.update(llama_config['params'])
             assert args_map['n_heads'] % args_map['n_kv_heads'] == 0, f'make sure n_heads is divisible by n_kv_heads'
-        model = Transformer(ModelArgs(**args_map))
-        return model
+        return cls(ModelArgs(**args_map))
 
-    @classmethod
-    def from_official_pretrained(cls, llama_config:dict):
+    @staticmethod
+    def from_official_pretrained(llama_config:dict):
         from safetensors import safe_open  # pip install safetensors
         assert llama_config['model_type'] in ['llama3_8B', 'llama3_70B', 'llama3_405B'], f"{llama_config['model_type']} is invalid"
         model = Transformer.create_llama_model(llama_config)
@@ -103,8 +102,8 @@ class Transformer(nn.Module):
         model.load_state_dict(state_dict)
         return model
 
-    @classmethod
-    def from_local_pretrained(cls, llama_config:dict):
+    @staticmethod
+    def from_local_pretrained(llama_config:dict):
         from collections import OrderedDict
         model = Transformer.create_llama_model(llama_config)
         if llama_config['lora']:
@@ -121,8 +120,8 @@ class Transformer(nn.Module):
         model.load_state_dict(ckpt)
         return model
 
-    @classmethod
-    def from_scratch(cls, llama_config:dict):
+    @staticmethod
+    def from_scratch(llama_config:dict):
         model = Transformer.create_llama_model(llama_config)
         if llama_config['lora']:
             model.init_lora(rank=llama_config['lora_rank'], alpha=llama_config['lora_alpha'])
