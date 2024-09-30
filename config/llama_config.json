@@ -18,6 +18,7 @@
     }, 
     "dp_shard" : false, 
     "parallel_loss": false, 
+    "pipeline_parallel_schedule": "gpipe", 
 
     "params": {
         "dim": 256, 
