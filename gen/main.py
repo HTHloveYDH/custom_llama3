@@ -18,11 +18,12 @@ def main():
     llama3_config, gen_config, cloud_config = load_configs('gen')
     # llama3 configs
     parallel_dims = llama3_config['parallel_dims']
-    dp, tp, pp = parallel_dims['dp'], parallel_dims['tp'], parallel_dims['pp']
-    dp_shard = llama3_config['dp_shard']
-    assert not (dp_shard and dp == 1)
+    dps, tps, pps = parallel_dims['dp'], parallel_dims['tp'], parallel_dims['pp']
+    dp, tp, pp = llama3_config['dp'], llama3_config['tp'], llama3_config['pp']
+    assert not (dp['shard'] and dps == 1)
+    assert not (tp['parallel_loss'] and tps == 1)
+    assert not (tp['parallel_loss'] and dps > 1)
     tokenizer_path = llama3_config['tokenizer_path']
-    use_compile = llama3_config['use_compile']
     llama3_config['align'] = False
     # generation configs
     dialog = gen_config['dialog']

@@ -31,12 +31,12 @@ def main():
     llama3_config, train_config, data_config, cloud_config = load_configs('train')
     # llama3 configs
     parallel_dims = llama3_config['parallel_dims']
-    dp, tp, pp = parallel_dims['dp'], parallel_dims['tp'], parallel_dims['pp']
-    dp_shard = llama3_config['dp_shard']
-    assert not (dp_shard and dp == 1)
-    parallel_loss = llama3_config['parallel_loss']
-    assert not (parallel_loss and tp == 1)
-    assert not (parallel_loss and dp > 1)
+    dps, tps, pps = parallel_dims['dp'], parallel_dims['tp'], parallel_dims['pp']
+    dp, tp, pp = llama3_config['dp'], llama3_config['tp'], llama3_config['pp']
+    assert not (dp['shard'] and dps == 1)
+    assert not (tp['parallel_loss'] and tps == 1)
+    assert not (tp['parallel_loss'] and dps > 1)
+    parallel_loss = tp['parallel_loss']
     tokenizer_path = llama3_config['tokenizer_path']
     use_compile = llama3_config['use_compile']
     lora = llama3_config['lora']
@@ -81,8 +81,8 @@ def main():
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
-    assert total_token_num % (max_batch_size * max_seq_len * dp) == 0, 'make sure total_token_num is divisible by B * T * dp'
-    steps_per_epoch = total_token_num // (max_batch_size * max_seq_len * dp)
+    assert total_token_num % (max_batch_size * max_seq_len * dps) == 0, 'make sure total_token_num is divisible by B * T * dp'
+    steps_per_epoch = total_token_num // (max_batch_size * max_seq_len * dps)
     assert steps_per_epoch % grad_accum_steps == 0, 'make sure steps_per_epoch is divisible by grad_accum_steps'
     if master_process:
         print(f'total desired batch size: {total_token_num}')
@@ -94,10 +94,10 @@ def main():
     # val_data_loader = DemoDataLoader(data_root, max_seq_len, max_batch_size, 'val')
     DataLoaderLite_factory = DataLoaderLiteFactory()
     # get global rank on data parallel level
-    dp_global_rank = 0 if dp == 1 else device_mesh['dp'].get_rank()
+    dp_global_rank = 0 if dps == 1 else device_mesh['dp'].get_rank()
     kwargs = {
         'B': max_batch_size, 'T': max_seq_len, 'process_rank': dp_global_rank,
-        'num_processes': dp, 'tokenizer_path': tokenizer_path,
+        'num_processes': dps, 'tokenizer_path': tokenizer_path,
         'data_root': data_root, 'master_process': master_process, 'split': 'train'
     }
     train_data_loader = DataLoaderLite_factory.create(align, dialog, data_format, **kwargs)
@@ -130,7 +130,7 @@ def main():
             master_process, lora
         )
         # generate sentences to verify current weights in the master process
-        if master_process and not tp > 1:
+        if master_process and not tps > 1:
             # _, _ = generate(
             #     model, "Hello, I'm a language model,", gen_batch_size, gen_len, temperature, top_p,
             #     device

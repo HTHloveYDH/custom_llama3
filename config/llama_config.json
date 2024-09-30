@@ -16,9 +16,15 @@
         "tp": 1, 
         "pp": 1
     }, 
-    "dp_shard" : false, 
-    "parallel_loss": false, 
-    "pipeline_parallel_schedule": "gpipe", 
+    "dp": {
+        "dp_shard" : false
+    }, 
+    "tp": {
+        "parallel_loss": false
+    }, 
+    "pp": {
+        "pipeline_parallel_schedule": "gpipe"
+    }, 
 
     "params": {
         "dim": 256, 

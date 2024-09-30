@@ -15,29 +15,28 @@ from models.Transformer import Transformer as Llama
 from models.DPOLlama import DPOLlama
 
 
-def build_pipeline_schedule(job_config, stages, loss_fn):
+def build_pipeline_schedule(pp:dict, stages, loss_fn):
     looped_schedule = False
-
-    if job_config.experimental.pipeline_parallel_schedule == "1f1b":
+    if pp['pipeline_parallel_schedule'] == "1f1b":
         schedule_class = Schedule1F1B
-    elif job_config.experimental.pipeline_parallel_schedule == "gpipe":
+    elif pp['pipeline_parallel_schedule'] == "gpipe":
         schedule_class = ScheduleGPipe
-    elif job_config.experimental.pipeline_parallel_schedule == "interleaved_1f1b":
+    elif pp['pipeline_parallel_schedule'] == "interleaved_1f1b":
         schedule_class = ScheduleInterleaved1F1B
         looped_schedule = True
     # elif (
-    #     job_config.experimental.pipeline_parallel_schedule
+    #     pp['pipeline_parallel_schedule']
     #     == "flexible_interleaved_1f1b"
     # ):
     #     schedule_class = ScheduleFlexibleInterleaved1F1B
     #     looped_schedule = True
     else:
         raise NotImplementedError(
-            f"{job_config.experimental.pipeline_parallel_schedule} is not implemented"
+            f"{pp['pipeline_parallel_schedule']} is not implemented"
         )
-    n_microbatches = job_config.experimental.pipeline_parallel_microbatches
+    n_microbatches = pp['pipeline_parallel_microbatches']
     if n_microbatches is None:
-        n_microbatches = job_config.experimental.pipeline_parallel_degree
+        n_microbatches = pp['pipeline_parallel_degree']
 
     return schedule_class(
         stages if looped_schedule else stages[0],
