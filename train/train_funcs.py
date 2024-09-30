@@ -9,6 +9,36 @@ from torch.distributed.tensor.parallel import loss_parallel
 from utils.get_device_type import get_device_type
 
 
+def st_forward_pass(model, x, y, parallel_dims:dict, parallel_loss:bool):
+    logits = model(x)
+    if parallel_dims['dp'] > 1:
+        loss = model.module.compute_loss(logits, y, parallel_dims['tp'] > 1, parallel_loss)
+    else:
+        loss = model.compute_loss(logits, y, parallel_dims['tp'] > 1, parallel_loss)
+    return loss
+
+def st_backward_pass(loss, parallel_loss:bool):
+    if parallel_loss:
+        with loss_parallel():
+            loss.backward()
+    else:
+        loss.backward()
+
+def pp_st_forward_pass(model, x, y, parallel_dims:dict, parallel_loss:bool):
+    logits = model(x)
+    if parallel_dims['dp'] > 1:
+        loss = model.module.compute_loss(logits, y, parallel_dims['tp'] > 1, parallel_loss)
+    else:
+        loss = model.compute_loss(logits, y, parallel_dims['tp'] > 1, parallel_loss)
+    return loss
+
+def pp_st_backward_pass(loss, parallel_loss:bool):
+    if parallel_loss:
+        with loss_parallel():
+            loss.backward()
+    else:
+        loss.backward()
+
 def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch:int, \
                       grad_accum_steps:int, epoch:int, log_interval:int, parallel_dims:dict, \
                       parallel_loss:bool, master_process:bool):
@@ -25,18 +55,16 @@ def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch
         if parallel:
             model.require_backward_grad_sync = ((step + 1) % grad_accum_steps == 0)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
-            logits = model(x)
-            if parallel_dims['dp'] > 1:
-                loss = model.module.compute_loss(logits, y, parallel_dims['tp'] > 1, parallel_loss)
+            if parallel_dims['pp'] > 1:
+                loss = pp_st_forward_pass(model, x, y, parallel_dims, parallel_loss)
             else:
-                loss = model.compute_loss(logits, y, parallel_dims['tp'] > 1, parallel_loss)
+                loss = st_forward_pass(model, x, y, parallel_dims, parallel_loss)
         loss_accum = loss.detach()
         # backward
-        if parallel_loss:
-            with loss_parallel():
-                loss.backward()
+        if parallel_dims['pp'] > 1:
+            pp_st_backward_pass(loss, parallel_loss)
         else:
-            loss.backward()
+            st_backward_pass(loss, parallel_loss)
         if parallel and not parallel_loss:
             dist.all_reduce(loss_accum, op=dist.ReduceOp.AVG)  # all_reduce (mean)
         # update weights at the 'grad_accum_steps'st step of every 'grad_accum_steps' steps
@@ -65,11 +93,10 @@ def st_valid_on_epoch(model, data_loader, device:str, val_steps:int, epoch:int, 
         x, y = data_loader.next_batch()
         x, y = x.to(device), y.to(device)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
-            logits = model(x)
-            if parallel_dims['dp'] > 1:
-                loss = model.module.compute_loss(logits, y, parallel_dims['tp'] > 1, parallel_loss)
+            if parallel_dims['pp'] > 1:
+                loss = st_forward_pass(model, x, y, parallel_dims, parallel_loss)
             else:
-                loss = model.compute_loss(logits, y, parallel_dims['tp'] > 1, parallel_loss)
+                loss = pp_st_forward_pass(model, x, y, parallel_dims, parallel_loss)
         loss = loss / val_steps
         val_loss_accum += loss.detach()
     if parallel and not parallel_loss:
@@ -88,6 +115,29 @@ def st_valid_on_epoch(model, data_loader, device:str, val_steps:int, epoch:int, 
             _save_ckpt(model, epoch, val_loss_accum.item(), save_curr_model_path, lora)
             _save_ckpt(model, epoch, val_loss_accum.item(), checkpoint_path, lora)
 
+def dpo_forward_pass(model, x_winner, x_loser, parallel_dims:dict, parallel_loss:bool):
+    winner_values, winner_logits = model(x_winner)
+    loser_values, loser_logits = model(x_loser)
+    # compute dpo loss
+    if parallel_dims['dp'] > 1:
+        # loss = model.module.dpo_loss(winner_values.mean(dim=-1), loser_values.mean(dim=-1))
+        loss = model.module.dpo_loss(
+            winner_values[:, -1], loser_values[:, -1], parallel_dims['tp'] > 1
+        )
+    else:
+        # loss = model.dpo_loss(winner_values.mean(dim=-1), loser_values.mean(dim=-1))
+        loss = model.dpo_loss(
+            winner_values[:, -1], loser_values[:, -1], parallel_dims['tp'] > 1
+        )
+    return loss
+
+def dpo_backward_pass(loss, parallel_loss:bool):
+    if parallel_loss:
+        with loss_parallel():
+            loss.backward()
+    else:
+        loss.backward()
+
 def dpo_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch:int, \
                        grad_accum_steps:int, epoch:int, log_interval:int, parallel_dims:dict, \
                        parallel_loss:bool, master_process:bool):
@@ -103,26 +153,10 @@ def dpo_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoc
         if parallel:
             model.require_backward_grad_sync = ((step + 1) % grad_accum_steps == 0)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
-            winner_values, winner_logits = model(x_winner)
-            loser_values, loser_logits = model(x_loser)
-            # compute dpo loss
-            if parallel_dims['dp'] > 1:
-                # loss = model.module.dpo_loss(winner_values.mean(dim=-1), loser_values.mean(dim=-1))
-                loss = model.module.dpo_loss(
-                    winner_values[:, -1], loser_values[:, -1], parallel_dims['tp'] > 1
-                )
-            else:
-                # loss = model.dpo_loss(winner_values.mean(dim=-1), loser_values.mean(dim=-1))
-                loss = model.dpo_loss(
-                    winner_values[:, -1], loser_values[:, -1], parallel_dims['tp'] > 1
-                )
+            loss = dpo_forward_pass(model, x_winner, x_loser, parallel_dims, parallel_loss)
         loss_accum = loss.detach()
         # backward
-        if parallel_loss:
-            with loss_parallel():
-                loss.backward()
-        else:
-            loss.backward()
+        dpo_backward_pass(loss, parallel_loss)
         if parallel and not parallel_loss:
             dist.all_reduce(loss_accum, op=dist.ReduceOp.AVG)  # all_reduce (mean)
         # update weights at the 'grad_accum_steps'st step of every 'grad_accum_steps' steps

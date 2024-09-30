@@ -14,8 +14,9 @@ from torch.distributed.fsdp.wrap import (
     wrap,
 )
 
-from dist.tensor_parallel import TP
-from dist.pipeline_parallel import PP
+from dist.tensor_parallel import tensor_parallelize
+from dist.module_parallel import module_parallelize
+from dist.pipeline_parallel import pipeline_parallelize
 from models.Transformer import Transformer as Llama
 from models.DPOLlama import DPOLlama
 
@@ -44,22 +45,31 @@ def get_model(llama_config:dict, device_mesh:dict, device, training:bool, **kwar
     dp_mesh = None if llama_config['parallel_dims']['dp'] == 1 else device_mesh['dp']
     tp_mesh = None if llama_config['parallel_dims']['tp'] == 1 else device_mesh['tp']
     pp_mesh = None if llama_config['parallel_dims']['pp'] == 1 else device_mesh['pp']
-    if tp_mesh is not None:
-        model = TP(model, tp_mesh, training, llama_config['parallel_loss'])
-    if pp_mesh is not None:
-        model = PP(model, pp_mesh, training)
-    # data parallelism
-    if llama_config['parallel_dims']['dp'] > 1:
-        if llama_config['dp_shard']:
-            # reference: https://pytorch.org/tutorials/intermediate/FSDP_tutorial.html#how-to-use-fsdp
-            model = FSDP(model, device_mesh=dp_mesh, use_orig_params=True)
-            # my_auto_wrap_policy = functools.partial(size_based_auto_wrap_policy, min_num_params=100)
-            # model = FSDP(
-            #     model, auto_wrap_policy=my_auto_wrap_policy, cpu_offload=CPUOffload(offload_params=True),
-            #     device_mesh=dp_mesh, use_orig_params=True
-            # )
-        else:
-            model = DDP(model, device_ids=[device])
+    # 2D parallel
+    if pp_mesh is None:
+        if tp_mesh is not None:
+            model = tensor_parallelize(model, tp_mesh, training, llama_config['parallel_loss'])
+        # data parallelism
+        if llama_config['parallel_dims']['dp'] > 1:
+            if llama_config['dp_shard']:
+                # reference: https://pytorch.org/tutorials/intermediate/FSDP_tutorial.html#how-to-use-fsdp
+                model = FSDP(model, device_mesh=dp_mesh, use_orig_params=True)
+                # my_auto_wrap_policy = functools.partial(size_based_auto_wrap_policy, min_num_params=100)
+                # model = FSDP(
+                #     model, auto_wrap_policy=my_auto_wrap_policy, cpu_offload=CPUOffload(offload_params=True),
+                #     device_mesh=dp_mesh, use_orig_params=True
+                # )
+            else:
+                model = DDP(model, device_ids=[device])
+    # 3D parallel
+    else:
+        pp_schedule, modules = pipeline_parallelize(model, pp_mesh, training)
+        # For PP with looped schedules, each item in model_parts is one stage-model-chunk.
+        # We need to iterate through model_parts to apply SPMD parallelisms, compilation,
+        # optimizer, and checkpointing
+        for module in modules:
+            # apply SPMD-style PT-D techniques
+            module_parallelize(module, device_mesh, llama_config)
     # print(f'distribute strategy is set to {dist_type}')
     return model, optimizer
 
