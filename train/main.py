@@ -36,6 +36,7 @@ def main():
     assert not (dp_shard and dp == 1)
     parallel_loss = llama3_config['parallel_loss']
     assert not (parallel_loss and tp == 1)
+    assert not (parallel_loss and dp > 1)
     tokenizer_path = llama3_config['tokenizer_path']
     use_compile = llama3_config['use_compile']
     lora = llama3_config['lora']

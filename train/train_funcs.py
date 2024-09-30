@@ -31,6 +31,7 @@ def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch
             else:
                 loss = model.compute_loss(logits, y, parallel_dims['tp'] > 1, parallel_loss)
         loss_accum = loss.detach()
+        # backward
         if parallel_loss:
             with loss_parallel():
                 loss.backward()
@@ -116,6 +117,7 @@ def dpo_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoc
                     winner_values[:, -1], loser_values[:, -1], parallel_dims['tp'] > 1
                 )
         loss_accum = loss.detach()
+        # backward
         if parallel_loss:
             with loss_parallel():
                 loss.backward()
