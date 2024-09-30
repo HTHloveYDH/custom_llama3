@@ -18,6 +18,8 @@ def create_device_mesh(parallel_dims:dict, device_type:str):
     return device_mesh
 
 def init_dist(parallel_dims:dict):
+    visible_devices = get_devices('cuda')
+    print(f'{len(visible_devices)} visible devices: ', visible_devices, ' detected.')
     if parallel_dims['dp'] == 1 and parallel_dims['tp'] == 1 and parallel_dims['pp'] == 1:
         master_process = True
         # attempt to autodetect device
