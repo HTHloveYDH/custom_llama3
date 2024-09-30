@@ -31,12 +31,12 @@ def get_model(llama_config:dict, device_mesh:dict, device, training:bool, **kwar
         model = Llama.from_local_pretrained(llama_config)
     else:
         model = Llama.from_scratch(llama_config)
-    if llama_config['align']:
-        model = DPOLlama(model)
     model.to(device)
-    # optimizer
+    # dpo and optimizer
     optimizer = None
     if training:
+        if llama_config['align']:
+            model = DPOLlama(model)
         optimizer = _get_optimizer(model, **kwargs)
     use_compile = False # torch.compile interferes with HellaSwag eval and Generation. TODO fix
     if use_compile:

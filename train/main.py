@@ -38,7 +38,6 @@ def main():
     assert not (tp['parallel_loss'] and dps > 1)
     parallel_loss = tp['parallel_loss']
     tokenizer_path = llama3_config['tokenizer_path']
-    use_compile = llama3_config['use_compile']
     lora = llama3_config['lora']
     # train configs
     training_type = train_config['training_type']
