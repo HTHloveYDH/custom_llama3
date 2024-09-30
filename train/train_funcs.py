@@ -141,10 +141,12 @@ def dpo_backward_pass(loss, parallel_loss:bool):
 def dpo_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch:int, \
                        grad_accum_steps:int, epoch:int, log_interval:int, parallel_dims:dict, \
                        parallel_loss:bool, master_process:bool):
+    # TODO: add pipeline parallel for DPO
+    assert parallel_dims['pp'] == 1
     model.train()
     loss_tracker = []
     device_type = get_device_type(device)
-    parallel = parallel_dims['dp'] > 1 or parallel_dims['tp'] > 1 or parallel_dims['pp'] > 1
+    parallel = parallel_dims['dp'] > 1 or parallel_dims['tp'] > 1
     for step in range(steps_per_epoch):
         start_time = time.time()
         loss_accum = 0.0
@@ -175,10 +177,12 @@ def dpo_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoc
 @torch.no_grad()
 def dpo_valid_on_epoch(model, data_loader, device:str, val_steps:int, epoch:int, parallel_dims:dict, \
                        parallel_loss:bool, master_process:bool, lora:bool):
+    # TODO: add pipeline parallel for DPO
+    assert parallel_dims['pp'] == 1
     model.eval()
     val_loss_tracker = []
     device_type = get_device_type(device)
-    parallel = parallel_dims['dp'] > 1 or parallel_dims['tp'] > 1 or parallel_dims['pp'] > 1
+    parallel = parallel_dims['dp'] > 1 or parallel_dims['tp'] > 1
     val_loss_accum = 0.0
     for _ in range(val_steps):
         x_winner, x_loser = data_loader.next_batch()
