@@ -6,7 +6,7 @@ from torch.distributed.device_mesh import init_device_mesh
 
 from dist.device import get_devices
 
-def init_device_mesh(parallel_dims:dict, device_type:str):
+def create_device_mesh(parallel_dims:dict, device_type:str):
     device_mesh = None
     dim_names = []
     dims = []
@@ -41,7 +41,7 @@ def init_dist(parallel_dims:dict):
     torch.cuda.set_device(device)
     print(f'using device: {device}')
     device_type = 'cuda' if device.startswith('cuda') else 'cpu'
-    device_mesh = init_device_mesh(parallel_dims)
+    device_mesh = create_device_mesh(parallel_dims, device_type)
     return master_process, device, device_type, device_mesh
 
 def ternimate_dist(parallel_dims:dict):

@@ -39,12 +39,12 @@ def main():
     tokenizer_path = llama3_config['tokenizer_path']
     use_compile = llama3_config['use_compile']
     lora = llama3_config['lora']
-    llama3_config['align'] = align
     # train configs
     training_type = train_config['training_type']
     assert training_type in ['pt', 'pre-train', 'sft', 'supervised-finetune', 'dpo', 'rlhf'], f'training type: {training_type} is not supported'
     dialog = training_type in ['sft', 'supervised-finetune']
     align = training_type in ['dpo', 'align']
+    llama3_config['align'] = align
     learning_rate = train_config['learning_rate']  # defaults to 6e-4
     weight_decay = train_config['weight_decay']  # defaults to 0.1
     max_batch_size = train_config['max_batch_size']
@@ -105,7 +105,7 @@ def main():
 
     ''' ____________________________________ build & compile model ___________________________________ '''
     kwargs = {'learning_rate': learning_rate, 'weight_decay': weight_decay}
-    model, optimizer = get_model(llama3_config, device_mesh, True, parallel_loss, **kwargs)
+    model, optimizer = get_model(llama3_config, device_mesh, device, True, **kwargs)
 
     ''' ____________________________________________ train ___________________________________________ '''
     # get tokenizer

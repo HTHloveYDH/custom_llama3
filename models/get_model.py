@@ -20,7 +20,7 @@ from models.Transformer import Transformer as Llama
 from models.DPOLlama import DPOLlama
 
 
-def get_model(llama_config:dict, device_mesh:dict, device, training:bool, parallel_loss:bool, **kwargs):
+def get_model(llama_config:dict, device_mesh:dict, device, training:bool, **kwargs):
     assert llama_config['load_weights'] in ['official', 'local', None], f"load weights: {llama_config['load_weights']}  is not supported"
     # create model
     if llama_config['load_weights'] == 'official':
@@ -45,7 +45,7 @@ def get_model(llama_config:dict, device_mesh:dict, device, training:bool, parall
     tp_mesh = None if llama_config['parallel_dims']['tp'] == 1 else device_mesh['tp']
     pp_mesh = None if llama_config['parallel_dims']['pp'] == 1 else device_mesh['pp']
     if tp_mesh is not None:
-        model = TP(model, tp_mesh, training, parallel_loss)
+        model = TP(model, tp_mesh, training, llama_config['parallel_loss'])
     if pp_mesh is not None:
         model = PP(model, pp_mesh, training)
     # data parallelism
