@@ -19,10 +19,9 @@ def main():
     # llama3 configs
     parallel_dims = llama3_config['parallel_dims']
     dps, tps, pps = parallel_dims['dp'], parallel_dims['tp'], parallel_dims['pp']
-    dp, tp, pp = llama3_config['dp'], llama3_config['tp'], llama3_config['pp']
-    assert not (dp['shard'] and dps == 1)
-    assert not (tp['parallel_loss'] and tps == 1)
-    assert not (tp['parallel_loss'] and dps > 1)
+    assert not (llama3_config['dp']['shard'] and dps == 1)
+    assert not (llama3_config['tp']['parallel_loss'] and tps == 1)
+    assert not (llama3_config['tp']['parallel_loss'] and dps > 1)
     tokenizer_path = llama3_config['tokenizer_path']
     llama3_config['align'] = False
     # generation configs
