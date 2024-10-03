@@ -14,8 +14,8 @@ from torch.distributed.fsdp.wrap import (
     wrap,
 )
 
+from dist.data_parallel import fsdp, ddp
 from dist.tensor_parallel import tensor_parallelize
-from dist.module_parallel import module_parallelize
 from dist.pipeline_parallel import pipeline_parallelize
 from models.Transformer import Transformer as Llama
 from models.DPOLlama import DPOLlama
@@ -72,7 +72,6 @@ def get_model(llama_config:dict, device_mesh:dict, device, training:bool, **kwar
         for module in modules:
             # apply SPMD-style PT-D techniques
             module_parallelize(module, device_mesh, llama_config)
-    # print(f'distribute strategy is set to {dist_type}')
     return model, optimizer
 
 def _get_optimizer(raw_model, weight_decay:float, learning_rate:float):
