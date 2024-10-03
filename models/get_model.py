@@ -48,10 +48,12 @@ def get_model(llama_config:dict, device_mesh:dict, device, training:bool, **kwar
     # 2D parallel (tp + dp)
     if pp_mesh is None:
         if tp_mesh is not None:
-            model = tensor_parallelize(model, tp_mesh, training, llama_config['parallel_loss'])
+            model = tensor_parallelize(
+                model, tp_mesh, training, llama_config['dist']['parallel_loss']
+            )
         # data parallelism
         if llama_config['dist']['dp'] > 1:
-            if llama_config['dp_shard']:
+            if llama_config['dist']['dp_shard']:
                 # reference: https://pytorch.org/tutorials/intermediate/FSDP_tutorial.html#how-to-use-fsdp
                 model = FSDP(model, device_mesh=dp_mesh, use_orig_params=True)
                 # my_auto_wrap_policy = functools.partial(size_based_auto_wrap_policy, min_num_params=100)
