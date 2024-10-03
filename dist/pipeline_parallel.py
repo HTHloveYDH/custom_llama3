@@ -6,7 +6,7 @@ from typing import Tuple
 
 from torch.distributed.pipelining import (
     Schedule1F1B,
-    ScheduleFlexibleInterleaved1F1B,
+    # ScheduleFlexibleInterleaved1F1B,
     ScheduleGPipe,
     ScheduleInterleaved1F1B,
 )

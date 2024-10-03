@@ -32,7 +32,7 @@ def main():
     # llama3 configs
     dist = llama3_config['dist']
     dp, tp, pp = dist['dp'], dist['tp'], dist['pp']
-    assert not (dist['shard'] and dp == 1)
+    assert not (dist['dp_shard'] and dp == 1)
     assert not (dist['parallel_loss'] and tp == 1)
     assert not (dist['parallel_loss'] and dp > 1)
     tokenizer_path = llama3_config['tokenizer_path']
