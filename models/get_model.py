@@ -42,15 +42,15 @@ def get_model(llama_config:dict, device_mesh:dict, device, training:bool, **kwar
     if use_compile:
         model = torch.compile(model)
     # parallelism
-    dp_mesh = None if llama_config['parallel_dims']['dp'] == 1 else device_mesh['dp']
-    tp_mesh = None if llama_config['parallel_dims']['tp'] == 1 else device_mesh['tp']
-    pp_mesh = None if llama_config['parallel_dims']['pp'] == 1 else device_mesh['pp']
-    # 2D parallel
+    dp_mesh = None if llama_config['dist']['dp'] == 1 else device_mesh['dp']
+    tp_mesh = None if llama_config['dist']['tp'] == 1 else device_mesh['tp']
+    pp_mesh = None if llama_config['dist']['pp'] == 1 else device_mesh['pp']
+    # 2D parallel (tp + dp)
     if pp_mesh is None:
         if tp_mesh is not None:
             model = tensor_parallelize(model, tp_mesh, training, llama_config['parallel_loss'])
         # data parallelism
-        if llama_config['parallel_dims']['dp'] > 1:
+        if llama_config['dist']['dp'] > 1:
             if llama_config['dp_shard']:
                 # reference: https://pytorch.org/tutorials/intermediate/FSDP_tutorial.html#how-to-use-fsdp
                 model = FSDP(model, device_mesh=dp_mesh, use_orig_params=True)
@@ -61,7 +61,7 @@ def get_model(llama_config:dict, device_mesh:dict, device, training:bool, **kwar
                 # )
             else:
                 model = DDP(model, device_ids=[device])
-    # 3D parallel
+    # 3D parallel (pp + tp + dp)
     else:
         pp_schedule, modules = pipeline_parallelize(model, pp_mesh, training)
         # For PP with looped schedules, each item in model_parts is one stage-model-chunk.
