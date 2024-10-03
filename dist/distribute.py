@@ -4,7 +4,7 @@ import torch
 from torch.distributed import init_process_group, destroy_process_group
 from torch.distributed.device_mesh import init_device_mesh
 
-from ParallelArgs import ParallelArgs
+from dist.ParallelArgs import ParallelArgs
 from dist.device import get_devices
 
 def _create_device_mesh(dist:dict, device_type:str):
