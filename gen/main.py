@@ -17,11 +17,11 @@ def main():
     ''' __________________________________________ setup _____________________________________________ '''
     llama3_config, gen_config, cloud_config = load_configs('gen')
     # llama3 configs
-    parallel_dims = llama3_config['parallel_dims']
-    dps, tps, pps = parallel_dims['dp'], parallel_dims['tp'], parallel_dims['pp']
-    assert not (llama3_config['dp']['shard'] and dps == 1)
-    assert not (llama3_config['tp']['parallel_loss'] and tps == 1)
-    assert not (llama3_config['tp']['parallel_loss'] and dps > 1)
+    dist = llama3_config['dist']
+    dp, tp, pp = dist['dp'], dist['tp'], dist['pp']
+    assert not (dist['shard'] and dp == 1)
+    assert not (dist['parallel_loss'] and tp == 1)
+    assert not (dist['parallel_loss'] and dp > 1)
     tokenizer_path = llama3_config['tokenizer_path']
     llama3_config['align'] = False
     # generation configs
@@ -44,7 +44,7 @@ def main():
     prompt = gen_config['prompt']
     # set up DP (distributed data parallel or fully sharded data parallel).
     # torchrun command sets the env variables RANK, LOCAL_RANK, and WORLD_SIZE
-    master_process, device, device_type, device_mesh = init_dist(parallel_dims)
+    master_process, device, device_mesh, parallel_args = init_dist(dist)
     # set random seed
     torch.manual_seed(seed)
     if torch.cuda.is_available():
@@ -56,8 +56,6 @@ def main():
 
     ''' ____________________________________________ test ___________________________________________ '''
     # _, _ = generate(model, prompt, gen_batch_size, gen_len, temperature, top_p, device=device)
-    # get global rank on data parallel level
-    dp_global_rank = 0 if dp == 1 else device_mesh['dp'].get_rank()
     # get tokenizer
     tokenizer, chat_format = get_tokenizer(tokenizer_path)
     # Prepare for timing
@@ -66,17 +64,17 @@ def main():
         start_time = time.time()
         if cot:
             steps, think_time = cot_generate(
-                model, tokenizer, chat_format, prompt, device, gen_len, dp_global_rank
+                model, tokenizer, chat_format, prompt, device, gen_len, parallel_args.dp_global_rank
             )
         elif rag:
             return_messages = rag_generate(
                 model, tokenizer, chat_format, prompt, device, gen_len, dialog, database_path,
-                raw_txt_data_path, dp_global_rank
+                raw_txt_data_path, parallel_args.dp_global_rank
             )
         else:
             return_messages = generate(
                 model, tokenizer, chat_format, prompt, device, gen_batch_size, gen_len, dialog,
-                dp_global_rank
+                parallel_args.dp_global_rank
             )
         end_time = time.time()
         generation_time = end_time - start_time
@@ -93,7 +91,7 @@ def main():
         print(f"Standard Deviation: {std_dev:.4f} seconds")
         print(f"Minimum Time: {min_time:.4f} seconds")
         print(f"Maximum Time: {max_time:.4f} seconds")
-    ternimate_dist(parallel_dims)
+    ternimate_dist(dist)
 
 
 if __name__ == '__main__':

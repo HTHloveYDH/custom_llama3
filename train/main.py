@@ -30,12 +30,11 @@ def main():
     # load configs
     llama3_config, train_config, data_config, cloud_config = load_configs('train')
     # llama3 configs
-    parallel_dims = llama3_config['parallel_dims']
-    dps, tps, pps = parallel_dims['dp'], parallel_dims['tp'], parallel_dims['pp']
-    assert not (llama3_config['dp']['shard'] and dps == 1)
-    assert not (llama3_config['tp']['parallel_loss'] and tps == 1)
-    assert not (llama3_config['tp']['parallel_loss'] and dps > 1)
-    parallel_loss = llama3_config['tp']['parallel_loss']
+    dist = llama3_config['dist']
+    dp, tp, pp = dist['dp'], dist['tp'], dist['pp']
+    assert not (dist['shard'] and dp == 1)
+    assert not (dist['parallel_loss'] and tp == 1)
+    assert not (dist['parallel_loss'] and dp > 1)
     tokenizer_path = llama3_config['tokenizer_path']
     lora = llama3_config['lora']
     # train configs
@@ -74,13 +73,13 @@ def main():
     total_token_num = data_config['total_token_num']
     # set up DP (distributed data parallel or fully sharded data parallel) process group.
     # torchrun command sets the env variables RANK, LOCAL_RANK, and WORLD_SIZE
-    master_process, device, device_type, device_mesh = init_dist(parallel_dims)
+    master_process, device, device_mesh, parallel_args = init_dist(dist)
     # set random seed
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
-    assert total_token_num % (max_batch_size * max_seq_len * dps) == 0, 'make sure total_token_num is divisible by B * T * dp'
-    steps_per_epoch = total_token_num // (max_batch_size * max_seq_len * dps)
+    assert total_token_num % (max_batch_size * max_seq_len * dp) == 0, 'make sure total_token_num is divisible by B * T * dp'
+    steps_per_epoch = total_token_num // (max_batch_size * max_seq_len * dp)
     assert steps_per_epoch % grad_accum_steps == 0, 'make sure steps_per_epoch is divisible by grad_accum_steps'
     if master_process:
         print(f'total desired batch size: {total_token_num}')
@@ -92,10 +91,9 @@ def main():
     # val_data_loader = DemoDataLoader(data_root, max_seq_len, max_batch_size, 'val')
     DataLoaderLite_factory = DataLoaderLiteFactory()
     # get global rank on data parallel level
-    dp_global_rank = 0 if dps == 1 else device_mesh['dp'].get_rank()
     kwargs = {
-        'B': max_batch_size, 'T': max_seq_len, 'process_rank': dp_global_rank,
-        'num_processes': dps, 'tokenizer_path': tokenizer_path,
+        'B': max_batch_size, 'T': max_seq_len, 'process_rank': parallel_args.dp_global_rank,
+        'num_processes': dp, 'tokenizer_path': tokenizer_path,
         'data_root': data_root, 'master_process': master_process, 'split': 'train'
     }
     train_data_loader = DataLoaderLite_factory.create(align, dialog, data_format, **kwargs)
@@ -119,26 +117,25 @@ def main():
         print(f'epoch: {epoch} / {epochs}:')
         # train llm for one epoch
         train_on_epoch(
-            model, train_data_loader, optimizer, device, steps_per_epoch, grad_accum_steps, 
-            epoch, log_interval, parallel_dims, parallel_loss, master_process
+            model, train_data_loader, optimizer, device, steps_per_epoch, grad_accum_steps, epoch, 
+            log_interval, parallel_args, master_process
         )
         # validate current weights on validation dataset shard of current process
         valid_on_epoch(
-            model, val_data_loader, device, val_steps, epoch, parallel_dims, parallel_loss, 
-            master_process, lora
+            model, val_data_loader, device, val_steps, epoch, parallel_args, master_process, lora
         )
         # generate sentences to verify current weights in the master process
-        if master_process and not tps > 1:
+        if master_process and not tp > 1:
             # _, _ = generate(
             #     model, "Hello, I'm a language model,", gen_batch_size, gen_len, temperature, top_p,
             #     device
             # )
             return_messages = generate(
                 model, tokenizer, chat_format, prompt, device, gen_batch_size, gen_len, dialog,
-                dp_global_rank
+                parallel_args.dp_global_rank
             )
     # terminate process group
-    ternimate_dist(parallel_dims)
+    ternimate_dist(dist)
 
 
 if __name__ == '__main__':

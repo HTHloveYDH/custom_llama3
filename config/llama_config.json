@@ -11,20 +11,15 @@
     "lora_alpha": 1,
     "lora_rank": 1, 
 
-    "parallel_dims": {
+    "dist": {
         "dp": 1, 
         "tp": 1, 
-        "pp": 1
-    }, 
-    "dp": {
-        "dp_shard" : false
-    }, 
-    "tp": {
-        "parallel_loss": false
-    }, 
-    "pp": {
+        "pp": 1, 
+
+        "dp_shard" : false,
+        "parallel_loss": false, 
         "pipeline_parallel_schedule": "gpipe"
-    }, 
+    },
 
     "params": {
         "dim": 256, 
