@@ -28,31 +28,34 @@ def main():
     # save log file
     sys.stdout = Logger(log_file_path, sys.stdout)
     # load configs
-    llama3_config, train_config, data_config, cloud_config = load_configs('train')
+    llama_config, train_config, data_config, cloud_config = load_configs('train')
     # llama3 configs
-    dist = llama3_config['dist']
+    dist = llama_config['dist']
     dp, tp, pp = dist['dp'], dist['tp'], dist['pp']
     assert not (dist['dp_shard'] and dp == 1)
     assert not (dist['parallel_loss'] and tp == 1)
     assert not (dist['parallel_loss'] and dp > 1)
-    tokenizer_path = llama3_config['tokenizer_path']
-    lora = llama3_config['lora']
+    tokenizer_path = llama_config['tokenizer_path']
+    lora = llama_config['lora']
     # train configs
     training_type = train_config['training_type']
     assert training_type in ['pt', 'pre-train', 'sft', 'supervised-finetune', 'dpo', 'rlhf'], f'training type: {training_type} is not supported'
     dialog = training_type in ['sft', 'supervised-finetune']
     align = training_type in ['dpo', 'align']
-    llama3_config['align'] = align
+    llama_config['align'] = align
     learning_rate = train_config['learning_rate']  # defaults to 6e-4
     weight_decay = train_config['weight_decay']  # defaults to 0.1
     max_batch_size = train_config['max_batch_size']
     max_seq_len = train_config['max_seq_len']
-    if llama3_config['model_type'] in ['llama3_8B', 'llama3_70B', 'llama3_405B']:
+    if llama_config['model_type'] in [
+        'llama2_7B', 'llama2_13B', 'llama2_70B', 
+        'llama3_8B', 'llama3_70B', 'llama3_405B'
+    ]:
         assert max_batch_size == 32
         assert max_seq_len == 2048
     else:
-        assert max_batch_size == llama3_config['params']['max_batch_size']
-        assert max_seq_len == llama3_config['params']['max_seq_len']
+        assert max_batch_size == llama_config['params']['max_batch_size']
+        assert max_seq_len == llama_config['params']['max_seq_len']
     grad_accum_steps = train_config['grad_accum_steps']
     val_steps = train_config['val_steps']
     epochs = train_config['epochs']
@@ -102,7 +105,7 @@ def main():
 
     ''' ____________________________________ build & compile model ___________________________________ '''
     kwargs = {'learning_rate': learning_rate, 'weight_decay': weight_decay}
-    model, optimizer = get_model(llama3_config, device_mesh, device, True, **kwargs)
+    model, optimizer = get_model(llama_config, device_mesh, device, True, **kwargs)
 
     ''' ____________________________________________ train ___________________________________________ '''
     # get tokenizer

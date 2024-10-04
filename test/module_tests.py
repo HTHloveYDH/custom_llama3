@@ -136,7 +136,7 @@ def TransformerTEST(arg_map):
 #     print(f'[DemoDataLoader] DemoDataLoaderTEST passed')
 
 def TokenizerTEST():
-    tokenizer_dir = os.path.join('.', 'tokenizer')
+    tokenizer_dir = os.path.join('.', 'tokenizer', 'llama3')
     for tokenizer_file in os.listdir(tokenizer_dir):
         tokenizer = Tokenizer(os.path.join(tokenizer_dir, tokenizer_file))
         tokens = tokenizer.encode("This is a test sentence.", bos=True, eos=True)
@@ -160,7 +160,7 @@ def ChatFormatTEST():
             "content": "This is a response.",
         }
     ]
-    tokenizer_dir = os.path.join('.', 'tokenizer')
+    tokenizer_dir = os.path.join('.', 'tokenizer', 'llama3')
     for tokenizer_file in os.listdir(tokenizer_dir):
         tokenizer = Tokenizer(os.path.join(tokenizer_dir, tokenizer_file))
         chat_format = ChatFormat(tokenizer)

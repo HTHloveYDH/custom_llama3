@@ -15,15 +15,15 @@ from utils.load_config import load_config_from_json as load_configs
 
 def main():
     ''' __________________________________________ setup _____________________________________________ '''
-    llama3_config, gen_config, cloud_config = load_configs('gen')
+    llama_config, gen_config, cloud_config = load_configs('gen')
     # llama3 configs
-    dist = llama3_config['dist']
+    dist = llama_config['dist']
     dp, tp, pp = dist['dp'], dist['tp'], dist['pp']
     assert not (dist['dp_shard'] and dp == 1)
     assert not (dist['parallel_loss'] and tp == 1)
     assert not (dist['parallel_loss'] and dp > 1)
-    tokenizer_path = llama3_config['tokenizer_path']
-    llama3_config['align'] = False
+    tokenizer_path = llama_config['tokenizer_path']
+    llama_config['align'] = False
     # generation configs
     dialog = gen_config['dialog']
     cot = gen_config['cot']
@@ -35,10 +35,13 @@ def main():
     gen_batch_size = gen_config['gen_batch_size']
     gen_len = gen_config['gen_len']
     num_runs = gen_config['num_runs']  # if measure generation time cost, set this value > 1
-    if llama3_config['model_type'] in ['llama3_8B', 'llama3_70B', 'llama3_405B']:
+    if llama_config['model_type'] in [
+        'llama2_7B', 'llama2_13B', 'llama2_70B', 
+        'llama3_8B', 'llama3_70B', 'llama3_405B'
+    ]:
         assert gen_batch_size == 32
     else:
-        assert gen_batch_size == llama3_config['params']['max_batch_size']
+        assert gen_batch_size == llama_config['params']['max_batch_size']
     temperature = gen_config['temperature']
     top_p = gen_config['top_p']
     prompt = gen_config['prompt']
@@ -52,7 +55,7 @@ def main():
     torch.set_float32_matmul_precision('high')
 
     ''' ____________________________________ build & compile model ___________________________________ '''
-    model, raw_model = get_model(llama3_config, device_mesh, device, False)
+    model, raw_model = get_model(llama_config, device_mesh, device, False)
 
     ''' ____________________________________________ test ___________________________________________ '''
     # _, _ = generate(model, prompt, gen_batch_size, gen_len, temperature, top_p, device=device)

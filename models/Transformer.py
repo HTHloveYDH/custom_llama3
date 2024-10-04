@@ -64,6 +64,21 @@ class Transformer(nn.Module):
     @classmethod
     def create_llama_model(cls, llama_config:dict):
         args_map = {
+            'llama2_7B': dict(
+                dim=4096, n_layers=32, n_heads=32, n_kv_heads=32, vocab_size=32000,
+                multiple_of=256, ffn_dim_multiplier=1.3, norm_eps=1e-5, rope_theta=10000.0,
+                max_batch_size=32, max_seq_len=2048
+            ),  # 7B parameters
+            'llama2_13B': dict(
+                dim=5120, n_layers=40, n_heads=40, n_kv_heads=40, vocab_size=32000,
+                multiple_of=256, ffn_dim_multiplier=1.3, norm_eps=1e-5, rope_theta=10000.0,
+                max_batch_size=32, max_seq_len=2048
+            ),  # 13B parameters
+            'llama2_70B': dict(
+                dim=8192, n_layers=80, n_heads=64, n_kv_heads=8, vocab_size=32000,
+                multiple_of=4096, ffn_dim_multiplier=1.3, norm_eps=1e-5, rope_theta=10000.0,
+                max_batch_size=32, max_seq_len=2048
+            ),  # 70B parameters
             'llama3_8B': dict(
                 dim=4096, n_layers=32, n_heads=32, n_kv_heads=8, vocab_size=128256,
                 multiple_of=1024, ffn_dim_multiplier=1.3, norm_eps=1e-5, rope_theta=500000.0,
@@ -89,7 +104,10 @@ class Transformer(nn.Module):
     @staticmethod
     def from_official_pretrained(llama_config:dict):
         from safetensors import safe_open  # pip install safetensors
-        assert llama_config['model_type'] in ['llama3_8B', 'llama3_70B', 'llama3_405B'], f"{llama_config['model_type']} is invalid"
+        assert llama_config['model_type'] in [
+            'llama2_7B', 'llama2_13B', 'llama2_70B', 
+            'llama3_8B', 'llama3_70B', 'llama3_405B'
+        ]
         model = Transformer.create_llama_model(llama_config)
         state_dict = {}
         weight_files = [
