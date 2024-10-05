@@ -55,7 +55,8 @@ def main():
     torch.set_float32_matmul_precision('high')
 
     ''' ____________________________________ build & compile model ___________________________________ '''
-    model, _, _ = get_model(llama_config, parallel_args, device_mesh, device, False)
+    model, _, _ = get_model(llama_config, device)
+    pp_schedule = parallelize_model(model, parallel_args, device_mesh, False)
 
     ''' ____________________________________________ test ___________________________________________ '''
     # _, _ = generate(model, prompt, gen_batch_size, gen_len, temperature, top_p, device=device)
