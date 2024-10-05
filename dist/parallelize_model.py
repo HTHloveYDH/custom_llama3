@@ -30,7 +30,7 @@ def parallelize_model(model:torch.nn.Module, parallel_args:ParallelArgs, device_
         if tp_mesh is not None:
             _ = tensor_parallelize(model, tp_mesh, training, parallel_args)
         if parallel_args.activation_checkpoint_mode is not None:
-            enable_activation_checkpoint(module, llama_config['activation_checkpoint_mode'])
+            enable_activation_checkpoint(module, parallel_args.activation_checkpoint_mode)
         # turn on per-TransformerBlock compile after AC wrapping and before FSDP
         if parallel_args.compile:
             if model.params.norm_type == "fused_rmsnorm":
@@ -62,7 +62,7 @@ def parallelize_model(model:torch.nn.Module, parallel_args:ParallelArgs, device_
             if tp_mesh is not None:
                 _ = tensor_parallelize(module, tp_mesh, training, parallel_args)
             if parallel_args.activation_checkpoint_mode is not None:
-                enable_activation_checkpoint(module, llama_config['activation_checkpoint_mode'])
+                enable_activation_checkpoint(module, parallel_args.activation_checkpoint_mode)
             # turn on per-TransformerBlock compile after AC wrapping and before FSDP
             if papallel_args.compile:
                 if model.params.norm_type == "fused_rmsnorm":
