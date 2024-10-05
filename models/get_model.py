@@ -16,6 +16,14 @@ def get_model(llama_config:dict, device:str, **kwargs):
         model = Llama.from_local_pretrained(llama_config)
     else:
         model = Llama.from_scratch(llama_config)
+    # log model size
+    model_param_count = get_num_params(model)
+    num_flop_per_token = get_num_flop_per_token(
+        get_num_params(model, exclude_embedding=True), 
+        model.params
+    )
+    print(f'model param count: {model_param_count}')
+    print(f'flops per token: {num_flop_per_token}')
     model.to(device)
     # dpo and optimizer
     optimizer = None
