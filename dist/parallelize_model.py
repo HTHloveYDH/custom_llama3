@@ -74,3 +74,4 @@ def parallelize_model(model:torch.nn.Module, parallel_args:ParallelArgs, device_
             if dp_mesh is not None:
                 _ = data_parallelize(module, dp_mesh, training, parallel_args)
             module.train()
+    return pp_schedule
