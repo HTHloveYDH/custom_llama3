@@ -99,7 +99,7 @@ def _enable_data_parallel(model:nn.Module, dp_mesh:DeviceMesh, training:bool, pa
             tp_enabled=parallel_args.tp > 1, pp_enabled=parallel_args.pp > 1
         )
     else:
-        assert not (parallel_args.tp > 1 or parallel_args.pp > 1)
+        assert parallel_args.tp == 1 and parallel_args.pp == 1
         _enable_ddp(
             model, dp_mesh,
             enable_compile=parallel_args.compile,
