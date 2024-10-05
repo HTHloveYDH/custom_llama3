@@ -94,7 +94,7 @@ def _mixed_precision_dtype(
 
 
 def pipeline_llama_manual_split(
-        whole_model:torch.nn.Module,
+        whole_model:nn.Module,
         pp_mesh:DeviceMesh,
         parallel_args:ParallelArgs,
         device:DeviceType,
@@ -193,7 +193,7 @@ def pipeline_llama_manual_split(
     return stages, models
 
 def pipeline_parallelize_llama(
-        model:torch.nn.Module,
+        model:nn.Module,
         pp_mesh:DeviceMesh,
         parallel_args:ParallelArgs,
         device:DeviceType,
@@ -205,7 +205,7 @@ def pipeline_parallelize_llama(
     pp_schedule = build_pipeline_schedule(parallel_args, stages, loss_fn)
     return pp_schedule, models
 
-def pipeline_parallelize(model, pp_mesh:DeviceMesh, training:bool):
+def pipeline_parallelize(model:nn.Module, pp_mesh:DeviceMesh, training:bool):
     if isinstance(model, Llama):
         model = pipeline_parallelize_llama(model, pp_mesh, training)
     elif isinstance(model, DPOLlama):
