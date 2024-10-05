@@ -29,7 +29,7 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
     if pp_mesh is None:
         pp_schedule = None
         if tp_mesh is not None:
-            _ = tensor_parallelize(model, tp_mesh, training, parallel_args)
+            tensor_parallelize(model, tp_mesh, training, parallel_args)
         if parallel_args.activation_checkpoint_mode is not None:
             enable_activation_checkpoint(module, parallel_args.activation_checkpoint_mode)
         # turn on per-TransformerBlock compile after AC wrapping and before FSDP
@@ -61,7 +61,7 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
         for module in modules:
             # apply SPMD-style PT-D techniques
             if tp_mesh is not None:
-                _ = tensor_parallelize(module, tp_mesh, training, parallel_args)
+                tensor_parallelize(module, tp_mesh, training, parallel_args)
             if parallel_args.activation_checkpoint_mode is not None:
                 enable_activation_checkpoint(module, parallel_args.activation_checkpoint_mode)
             # turn on per-TransformerBlock compile after AC wrapping and before FSDP
@@ -73,6 +73,6 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
                     )
                 enable_compile(module)
             if dp_mesh is not None:
-                _ = data_parallelize(module, dp_mesh, training, parallel_args)
+                data_parallelize(module, dp_mesh, training, parallel_args)
             module.train()
     return pp_schedule
