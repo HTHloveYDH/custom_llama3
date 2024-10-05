@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 from torch.distributed import DeviceMesh
 from torch.distributed._tensor import Shard, Replicate
 from torch.distributed.tensor.parallel import (
