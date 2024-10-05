@@ -2,9 +2,6 @@
 1. https://github.com/pytorch/torchtitan/blob/main/torchtitan/utils.py
 2. https://github.com/pytorch/torchtitan/blob/main/torchtitan/parallelisms/parallelize_llama.py#L274
 '''
-import os
-from collections import defaultdict, OrderedDict
-
 import torch
 import torch.nn as nn
 
