@@ -9,7 +9,7 @@ def convert(ckpt_path:str, format:str, save_dir:str, splits=3):
 
     from models.Transformer import Transformer
     
-    def _convert_to_onnx(model:torch.nn.Module, save_dir:str):
+    def _convert_to_onnx(model:nn.Module, save_dir:str):
         model.train()
         dummy_input = torch.randn(1, model.params.max_seq_len, dtype=torch.long)
         torch.onnx._export(
@@ -21,7 +21,7 @@ def convert(ckpt_path:str, format:str, save_dir:str, splits=3):
             opset_version=13
         )
 
-    def _convert_to_safetensors(model:torch.nn.Module, save_dir:str, splits:int):
+    def _convert_to_safetensors(model:nn.Module, save_dir:str, splits:int):
         from safetensors.torch import save_file
         state_dict = model.state_dict()
         keys = list(state_dict.keys())
