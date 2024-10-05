@@ -17,7 +17,7 @@ from dist.ParallelArgs import ParallelArgs
 from dist.data_parallel import data_parallelize
 from dist.tensor_parallel import tensor_parallelize
 from dist.pipeline_parallel import pipeline_parallelize
-from utils.model_utils import enable_activation_checkpoint, enable_compile
+from dist.utils import enable_activation_checkpoint, enable_compile
 
 
 def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, training:bool):
