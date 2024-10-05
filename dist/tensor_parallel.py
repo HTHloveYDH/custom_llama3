@@ -16,7 +16,7 @@ from models.DPOLlama import DPOLlama
 from utils.logging import logger
 
 
-def tensor_parallelize_llama(model:nn.Module, tp_mesh:DeviceMesh, training:bool, parallel_args:ParallelArgs):
+def _enable_tensor_parallel(model:nn.Module, tp_mesh:DeviceMesh, training:bool, parallel_args:ParallelArgs):
     # parallelize the first embedding and the last linear out projection
     layer_tp_plan = {
         'tok_embeddings': RowwiseParallel(
@@ -70,13 +70,13 @@ def tensor_parallelize_llama(model:nn.Module, tp_mesh:DeviceMesh, training:bool,
         "Tensor Parallelism to the model"
     )
 
-def tensor_parallelize(model:nn.Module, tp_mesh:DeviceMesh, training:bool, parallel_args:ParallelArgs):
+def enable_tensor_parallel(model:nn.Module, tp_mesh:DeviceMesh, training:bool, parallel_args:ParallelArgs):
     assert not (parallel_args.parallel_loss and not training)
     if isinstance(model, Llama):
-        tensor_parallelize_llama(model, tp_mesh, training, parallel_args)
+        _enable_tensor_parallel(model, tp_mesh, training, parallel_args)
     elif isinstance(model, DPOLlama):
         # TODO:
         assert training
         layer_tp_plan = {'value_head': ColwiseParallel()}
         parallelize_module(model, tp_mesh, layer_tp_plan)
-        tensor_parallelize_llama(model.llm, tp_mesh, training, parallel_args)
+        _enable_tensor_parallel(model.llm, tp_mesh, training, parallel_args)
