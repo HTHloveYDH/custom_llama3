@@ -29,16 +29,13 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
     if pp_mesh is None:
         pp_schedule = None
         if tp_mesh is not None:
+            assert not (parallel_args.async_tp and not parallel_args.compile), ‘Async TP requires --parallel_args.compile’
             enable_tensor_parallel(model, tp_mesh, training, parallel_args)
         if parallel_args.activation_checkpoint_mode is not None:
             enable_activation_checkpoint(module, parallel_args.activation_checkpoint_mode)
         # turn on per-TransformerBlock compile after AC wrapping and before FSDP
         if parallel_args.compile:
-            if model.params.norm_type == "fused_rmsnorm":
-                raise NotImplementedError(
-                    "fused_rmsnorm is not compatible with torch.compile yet. "
-                    "Please use rmsnorm or layernorm."
-                )
+            assert not model.params.norm_type == 'fused_rmsnorm', 'fused_rmsnorm is not compatible with torch.compile yet. Please use rmsnorm or layernorm.'
             enable_compile(model)
         # data parallelism
         if dp_mesh is not None:
@@ -62,16 +59,13 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
         for module in modules:
             # apply SPMD-style PT-D techniques
             if tp_mesh is not None:
+                assert not (parallel_args.async_tp and not parallel_args.compile), ‘Async TP requires --parallel_args.compile’
                 enable_tensor_parallel(module, tp_mesh, training, parallel_args)
             if parallel_args.activation_checkpoint_mode is not None:
                 enable_activation_checkpoint(module, parallel_args.activation_checkpoint_mode)
             # turn on per-TransformerBlock compile after AC wrapping and before FSDP
             if papallel_args.compile:
-                if model.params.norm_type == "fused_rmsnorm":
-                    raise NotImplementedError(
-                        "fused_rmsnorm is not compatible with torch.compile yet. "
-                        "Please use rmsnorm or layernorm."
-                    )
+                assert not model.params.norm_type == 'fused_rmsnorm', 'fused_rmsnorm is not compatible with torch.compile yet. Please use rmsnorm or layernorm.'
                 enable_compile(module)
             if dp_mesh is not None:
                 enable_data_parallel(module, dp_mesh, training, parallel_args)
