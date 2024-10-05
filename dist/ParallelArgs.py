@@ -10,6 +10,8 @@ class ParallelArgs:
     
     # data parallel config
     dp_shard: bool = False
+    mixed_precision_reduce: str = 'float32' 
+    mixed_precision_param: str = 'float32'
 
     # tensor parallel config
     parallel_loss: bool = False
@@ -17,7 +19,7 @@ class ParallelArgs:
     float8: bool = False
 
     # pipeline parallel config
-    pipeline_parallel_schedule: str = "gpipe"
+    pipeline_parallel_schedule: str = 'gpipe'
     pipeline_parallel_microbatches: int = 2
 
     activation_checkpoint_mode: str = None
