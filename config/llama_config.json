@@ -24,8 +24,7 @@
         "pipeline_parallel_schedule": "gpipe", 
 
         "activation_checkpoint_mode": null,
-        "compile": false, 
-    
+        "compile": false
     },
 
     "params": {
