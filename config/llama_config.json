@@ -9,8 +9,6 @@
     "lora": false, 
     "lora_alpha": 1,
     "lora_rank": 1, 
-    
-    "compile": false, 
 
     "dist": {
         "dp": 1, 
@@ -26,6 +24,7 @@
         "pipeline_parallel_schedule": "gpipe", 
 
         "activation_checkpoint_mode": null,
+        "compile": false, 
     
     },
 
