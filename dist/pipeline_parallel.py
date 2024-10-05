@@ -193,7 +193,7 @@ def pipeline_llama_manual_split(
         models.append(model_chunk)
     return stages, models
 
-def pipeline_parallelize_llama(
+def _enable_pipeline_parallel(
         model:nn.Module,
         pp_mesh:DeviceMesh,
         parallel_args:ParallelArgs,
@@ -207,10 +207,8 @@ def pipeline_parallelize_llama(
     pp_schedule = build_pipeline_schedule(parallel_args, stages, loss_fn)
     return pp_schedule, models
 
-def pipeline_parallelize(model:nn.Module, pp_mesh:DeviceMesh, training:bool):
-    if isinstance(model, Llama):
-        model = pipeline_parallelize_llama(model, pp_mesh, training)
-    elif isinstance(model, DPOLlama):
-        # TODO:
-        model.llm = pipeline_parallelize_llama(model.llm, pp_mesh, training)
-    return model
+def enable_pipeline_parallel(model:nn.Module, pp_mesh:DeviceMesh, training:bool):
+    assert isinstance(model, Llama)
+    pp_schedule, modules = _enable_pipeline_parallel(model, pp_mesh, training)
+    # TODO:
+    return pp_schedule, modules
