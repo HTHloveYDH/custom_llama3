@@ -90,13 +90,24 @@ def enable_ddp(
     logger.info("Applied DDP to the model")
 
 def data_parallelize_llama(model:nn.Module, dp_mesh:DeviceMesh, training:bool, parallel_args:ParallelArgs):
-    return model
+    if parallel_args.dp_shard:
+        enable_fsdp(
+            model, dp_mesh,
+            param_dtype=TORCH_DTYPE_MAP[parallel_args.mixed_precision_param],
+            reduce_dtype=TORCH_DTYPE_MAP[parallel_args.mixed_precision_reduce],
+            tp_enabled=parallel_args.tp > 1, pp_enabled=parallel_args.pp > 1
+        )
+    else:
+        enable_ddp(
+            model, dp_mesh,
+            enable_compile=parallel_args.compile,
+            enable_compiled_autograd=parallel_args.enable_compiled_autograd,
+        )
 
 def data_parallelize(model:nn.Module, dp_mesh:DeviceMesh, training:bool, parallel_args:ParallelArgs):
     if isinstance(model, Llama):
-        model = data_parallelize_llama(model, dp_mesh, training, parallel_args)
+        data_parallelize_llama(model, dp_mesh, training, parallel_args)
     elif isinstance(model, DPOLlama):
         # TODO:
-        model.llm = data_parallelize_llama(model.llm, dp_mesh, training, parallel_args)
-    return model
+        data_parallelize_llama(model.llm, dp_mesh, training, parallel_args)
     
