@@ -32,7 +32,7 @@ def parallelize_model(model:torch.nn.Module, parallel_args:ParallelArgs, device_
         if parallel_args.activation_checkpoint_mode is not None:
             enable_activation_checkpoint(module, llama_config['activation_checkpoint_mode'])
         # turn on per-TransformerBlock compile after AC wrapping and before FSDP
-        if llama_config['compile']:
+        if parallel_args.compile:
             if model.params.norm_type == "fused_rmsnorm":
                 raise NotImplementedError(
                     "fused_rmsnorm is not compatible with torch.compile yet. "
@@ -64,7 +64,7 @@ def parallelize_model(model:torch.nn.Module, parallel_args:ParallelArgs, device_
             if parallel_args.activation_checkpoint_mode is not None:
                 enable_activation_checkpoint(module, llama_config['activation_checkpoint_mode'])
             # turn on per-TransformerBlock compile after AC wrapping and before FSDP
-            if llama_config['compile']:
+            if papallel_args.compile:
                 if model.params.norm_type == "fused_rmsnorm":
                     raise NotImplementedError(
                         "fused_rmsnorm is not compatible with torch.compile yet. "
