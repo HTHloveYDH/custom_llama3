@@ -35,13 +35,13 @@ def _check_strided_sharding_enabled() -> None:
         )
 
 def enable_fsdp(
-    model:nn.Module,
-    dp_mesh:DeviceMesh,
-    param_dtype:torch.dtype,
-    reduce_dtype:torch.dtype,
-    tp_enabled:bool,
-    pp_enabled:bool,
-):
+        model:nn.Module,
+        dp_mesh:DeviceMesh,
+        param_dtype:torch.dtype,
+        reduce_dtype:torch.dtype,
+        tp_enabled:bool,
+        pp_enabled:bool,
+    ):
     """
     Apply data parallelism to the model. FSDP2 is used here.
     """
@@ -72,11 +72,11 @@ def enable_fsdp(
 
 
 def enable_ddp(
-    model:nn.Module,
-    dp_mesh:DeviceMesh,
-    enable_compile:bool,
-    enable_compiled_autograd:bool,
-):
+        model:nn.Module,
+        dp_mesh:DeviceMesh,
+        enable_compile:bool,
+        enable_compiled_autograd:bool,
+    ):
     if enable_compile:
         if enable_compiled_autograd:
             torch._dynamo.config.optimize_ddp = (
