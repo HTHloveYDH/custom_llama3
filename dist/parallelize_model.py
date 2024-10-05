@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.distributed.fsdp.fully_sharded_data_parallel import (
@@ -19,7 +20,7 @@ from dist.pipeline_parallel import pipeline_parallelize
 from utils.model_utils import enable_activation_checkpoint, enable_compile
 
 
-def parallelize_model(model:torch.nn.Module, parallel_args:ParallelArgs, device_mesh, training:bool):
+def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, training:bool):
     # parallelism
     dp_mesh = None if parallel_args.dp == 1 else device_mesh['dp']
     tp_mesh = None if parallel_args.tp == 1 else device_mesh['tp']
