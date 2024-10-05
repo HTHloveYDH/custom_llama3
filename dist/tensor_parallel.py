@@ -10,13 +10,13 @@ from torch.distributed.tensor.parallel import (
     SequenceParallel
 )
 
-from models.ModelArgs import ModelArgs
+from dist.ParallelArgs import ParallelArgs
 from models.Transformer import Transformer as Llama
 from models.DPOLlama import DPOLlama
 from utils.logging import logger
 
 
-def tensor_parallelize_llama(model:nn.Module, tp_mesh:DeviceMesh, training:bool, parallel_args:ModelArgs):
+def tensor_parallelize_llama(model:nn.Module, tp_mesh:DeviceMesh, training:bool, parallel_args:ParallelArgs):
     # parallelize the first embedding and the last linear out projection
     layer_tp_plan = {
         'tok_embeddings': RowwiseParallel(
@@ -71,7 +71,7 @@ def tensor_parallelize_llama(model:nn.Module, tp_mesh:DeviceMesh, training:bool,
     )
     return model
 
-def tensor_parallelize(model:nn.Module, tp_mesh:DeviceMesh, training:bool, parallel_args:ModelArgs):
+def tensor_parallelize(model:nn.Module, tp_mesh:DeviceMesh, training:bool, parallel_args:ParallelArgs):
     assert not (parallel_args.parallel_loss and not training)
     if isinstance(model, Llama):
         model = tensor_parallelize_llama(model, tp_mesh, training, parallel_args)
