@@ -52,7 +52,9 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
                 model = DDP(model, device_ids=[device])
     # 3D parallel (pp + tp + dp)
     else:
-        pp_schedule, modules = enable_pipeline_parallel(model, pp_mesh, training)
+        pp_schedule, modules = enable_pipeline_parallel(
+            model, pp_mesh, training, parallel_args, device, model.params
+        )
         # For PP with looped schedules, each item in model_parts is one stage-model-chunk.
         # We need to iterate through model_parts to apply SPMD parallelisms, compilation,
         # optimizer, and checkpointing
