@@ -51,7 +51,7 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
                 #     device_mesh=dp_mesh, use_orig_params=True
                 # )
             else:
-                assert tp_mesh is None and pp_mesh is None
+                assert tp_mesh is None and pp_mesh is None, 'DDP has not supported > 1D parallelism'
                 model = DDP(model, device_ids=[device])
     # 3D parallel (pp + tp + dp)
     else:
