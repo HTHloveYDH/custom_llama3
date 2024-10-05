@@ -35,7 +35,7 @@ def _check_strided_sharding_enabled() -> None:
             "DCP usage."
         )
 
-def enable_fsdp(
+def _enable_fsdp(
         model:nn.Module,
         dp_mesh:DeviceMesh,
         param_dtype:torch.dtype,
@@ -72,7 +72,7 @@ def enable_fsdp(
     fully_shard(model, **fsdp_config, reshard_after_forward=not pp_enabled)
 
 
-def enable_ddp(
+def _enable_ddp(
         model:nn.Module,
         dp_mesh:DeviceMesh,
         enable_compile:bool,
@@ -90,24 +90,24 @@ def enable_ddp(
 
     logger.info("Applied DDP to the model")
 
-def data_parallelize_llama(model:nn.Module, dp_mesh:DeviceMesh, training:bool, parallel_args:ParallelArgs):
+def _enable_data_parallel(model:nn.Module, dp_mesh:DeviceMesh, training:bool, parallel_args:ParallelArgs):
     if parallel_args.dp_shard:
-        enable_fsdp(
+        _enable_fsdp(
             model, dp_mesh,
             param_dtype=TORCH_DTYPE_MAP[parallel_args.mixed_precision_param],
             reduce_dtype=TORCH_DTYPE_MAP[parallel_args.mixed_precision_reduce],
             tp_enabled=parallel_args.tp > 1, pp_enabled=parallel_args.pp > 1
         )
     else:
-        enable_ddp(
+        _enable_ddp(
             model, dp_mesh,
             enable_compile=parallel_args.compile,
             enable_compiled_autograd=parallel_args.compiled_autograd,
         )
 
-def data_parallelize(model:nn.Module, dp_mesh:DeviceMesh, training:bool, parallel_args:ParallelArgs):
+def enable_data_parallel(model:nn.Module, dp_mesh:DeviceMesh, training:bool, parallel_args:ParallelArgs):
     if isinstance(model, Llama):
-        data_parallelize_llama(model, dp_mesh, training, parallel_args)
+        _enable_data_parallel(model, dp_mesh, training, parallel_args)
     elif isinstance(model, DPOLlama):
         # TODO:
-        data_parallelize_llama(model.llm, dp_mesh, training, parallel_args)
+        _enable_data_parallel(model.llm, dp_mesh, training, parallel_args)
