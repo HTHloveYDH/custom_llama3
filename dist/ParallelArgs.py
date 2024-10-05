@@ -18,6 +18,7 @@ class ParallelArgs:
 
     # pipeline parallel config
     pipeline_parallel_schedule: str = "gpipe"
+    pipeline_parallel_microbatches: int = 2
 
     activation_checkpoint_mode: str = None
     compile: bool = False
