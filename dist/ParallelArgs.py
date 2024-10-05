@@ -10,6 +10,7 @@ class ParallelArgs:
     
     # data parallel config
     dp_shard: bool = False
+    compiled_autograd: bool = False
     mixed_precision_reduce: str = 'float32' 
     mixed_precision_param: str = 'float32'
 
