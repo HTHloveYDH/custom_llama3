@@ -58,8 +58,8 @@ def build_pipeline_schedule(parallel_args:ParallelArgs, stages, loss_fn):
 
 # TODO(whc) should this be a utility inside torch.pipelining?
 def stage_ids_this_rank(
-    pp_local_rank:int, pp:int, num_stages:int, style:str = "loop"
-) -> Tuple[int]:
+        pp_local_rank:int, pp:int, num_stages:int, style:str = "loop"
+    ) -> Tuple[int]:
     """Compute the stage ids for the stages that will run on this pp rank for either a looped or V style schedule"""
     assert (
         num_stages % pp == 0
@@ -199,7 +199,8 @@ def pipeline_parallelize_llama(
         parallel_args:ParallelArgs,
         device:DeviceType,
         model_args:ModelArgs,
-        loss_fn:Callable[..., torch.Tensor],):
+        loss_fn:Callable[..., torch.Tensor]
+    ):
     stages, models = pipeline_llama_manual_split(
         model, pp_mesh, parallel_args, parallel_args, device, model_args
     )
