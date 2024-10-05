@@ -42,7 +42,7 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
             enable_compile(model)
         # data parallelism
         if dp_mesh is not None:
-            if model.dp_shard:
+            if parallel_args.dp_shard:
                 # reference: https://pytorch.org/tutorials/intermediate/FSDP_tutorial.html#how-to-use-fsdp
                 model = FSDP(model, device_mesh=dp_mesh, use_orig_params=True)
                 # my_auto_wrap_policy = functools.partial(size_based_auto_wrap_policy, min_num_params=100)
@@ -51,7 +51,7 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
                 #     device_mesh=dp_mesh, use_orig_params=True
                 # )
             else:
-                assert not (not parallel_args.dp_shard) and (tp_mesh is not None or pp_mesh is not None)
+                assert tp_mesh is None and pp_mesh is None
                 model = DDP(model, device_ids=[device])
     # 3D parallel (pp + tp + dp)
     else:
