@@ -7,6 +7,7 @@ from torch.distributed import DeviceMesh
 from torch.distributed._composable.fsdp import fully_shard, MixedPrecisionPolicy
 from torch.distributed._composable.replicate import replicate
 
+from config.torch_config import TORCH_DTYPE_MAP
 from dist.ParallelArgs import ParallelArgs
 from models.Transformer import Transformer as Llama
 from models.DPOLlama import DPOLlama
