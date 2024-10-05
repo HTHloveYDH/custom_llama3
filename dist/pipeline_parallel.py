@@ -6,6 +6,7 @@ from typing import Callable, Union, Tuple
 import copy
 
 import torch
+import torch.nn as nn
 from torch.distributed import DeviceMesh
 from torch.distributed.pipelining import PipelineStage
 from torch.distributed.pipelining import (
