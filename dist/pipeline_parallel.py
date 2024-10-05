@@ -213,8 +213,17 @@ def _enable_pipeline_parallel(
     pp_schedule = build_pipeline_schedule(parallel_args, stages, loss_fn)
     return pp_schedule, models
 
-def enable_pipeline_parallel(model:nn.Module, pp_mesh:DeviceMesh, training:bool):
+def enable_pipeline_parallel(
+        model:nn.Module, 
+        pp_mesh:DeviceMesh, 
+        training:bool, 
+        parallel_args:ParallelArgs,
+        device:DeviceType,
+        model_args:ModelArgs
+    ):
     assert isinstance(model, Llama)
-    pp_schedule, modules = _enable_pipeline_parallel(model, pp_mesh, training)
+    pp_schedule, modules = _enable_pipeline_parallel(
+        model, pp_mesh, parallel_args, device, model_args, loss_fn
+    )
     # TODO:
     return pp_schedule, modules
