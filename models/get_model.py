@@ -4,6 +4,7 @@ import torch
 
 from models.Transformer import Transformer as Llama
 from models.DPOLlama import DPOLlama
+from utils.model_utils import get_num_params, get_num_flop_per_token
 
 
 def get_model(llama_config:dict, device:str, **kwargs):
