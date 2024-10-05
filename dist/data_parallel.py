@@ -102,7 +102,7 @@ def data_parallelize_llama(model:nn.Module, dp_mesh:DeviceMesh, training:bool, p
         enable_ddp(
             model, dp_mesh,
             enable_compile=parallel_args.compile,
-            enable_compiled_autograd=parallel_args.enable_compiled_autograd,
+            enable_compiled_autograd=parallel_args.compiled_autograd,
         )
 
 def data_parallelize(model:nn.Module, dp_mesh:DeviceMesh, training:bool, parallel_args:ParallelArgs):
