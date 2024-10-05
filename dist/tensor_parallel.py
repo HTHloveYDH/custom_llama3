@@ -69,16 +69,14 @@ def tensor_parallelize_llama(model:nn.Module, tp_mesh:DeviceMesh, training:bool,
         f"Applied {'Float8 ' if parallel_args.float8 else ''}{'Async ' if parallel_args.async_tp else ''}"
         "Tensor Parallelism to the model"
     )
-    return model
 
 def tensor_parallelize(model:nn.Module, tp_mesh:DeviceMesh, training:bool, parallel_args:ParallelArgs):
     assert not (parallel_args.parallel_loss and not training)
     if isinstance(model, Llama):
-        model = tensor_parallelize_llama(model, tp_mesh, training, parallel_args)
+        tensor_parallelize_llama(model, tp_mesh, training, parallel_args)
     elif isinstance(model, DPOLlama):
         # TODO:
         assert training
         layer_tp_plan = {'value_head': ColwiseParallel()}
-        model = parallelize_module(model, tp_mesh, layer_tp_plan)
-        model.llm = tensor_parallelize_llama(model.llm, tp_mesh, training, parallel_args)
-    return model
+        parallelize_module(model, tp_mesh, layer_tp_plan)
+        tensor_parallelize_llama(model.llm, tp_mesh, training, parallel_args)
