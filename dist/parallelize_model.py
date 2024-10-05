@@ -14,9 +14,9 @@ from torch.distributed.fsdp.wrap import (
 
 from config.torch_config import TORCH_DTYPE_MAP
 from dist.ParallelArgs import ParallelArgs
-from dist.data_parallel import data_parallelize
-from dist.tensor_parallel import tensor_parallelize
-from dist.pipeline_parallel import pipeline_parallelize
+from dist.data_parallel import enable_data_parallel
+from dist.tensor_parallel import enable_tensor_parallel
+from dist.pipeline_parallel import enable_pipeline_parallel
 from dist.utils import enable_activation_checkpoint, enable_compile
 
 
@@ -29,7 +29,7 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
     if pp_mesh is None:
         pp_schedule = None
         if tp_mesh is not None:
-            tensor_parallelize(model, tp_mesh, training, parallel_args)
+            enable_tensor_parallel(model, tp_mesh, training, parallel_args)
         if parallel_args.activation_checkpoint_mode is not None:
             enable_activation_checkpoint(module, parallel_args.activation_checkpoint_mode)
         # turn on per-TransformerBlock compile after AC wrapping and before FSDP
@@ -54,14 +54,14 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
                 model = DDP(model, device_ids=[device])
     # 3D parallel (pp + tp + dp)
     else:
-        pp_schedule, modules = pipeline_parallelize(model, pp_mesh, training)
+        pp_schedule, modules = enable_pipeline_parallel(model, pp_mesh, training)
         # For PP with looped schedules, each item in model_parts is one stage-model-chunk.
         # We need to iterate through model_parts to apply SPMD parallelisms, compilation,
         # optimizer, and checkpointing
         for module in modules:
             # apply SPMD-style PT-D techniques
             if tp_mesh is not None:
-                tensor_parallelize(module, tp_mesh, training, parallel_args)
+                enable_tensor_parallel(module, tp_mesh, training, parallel_args)
             if parallel_args.activation_checkpoint_mode is not None:
                 enable_activation_checkpoint(module, parallel_args.activation_checkpoint_mode)
             # turn on per-TransformerBlock compile after AC wrapping and before FSDP
@@ -73,6 +73,6 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
                     )
                 enable_compile(module)
             if dp_mesh is not None:
-                data_parallelize(module, dp_mesh, training, parallel_args)
+                enable_data_parallel(module, dp_mesh, training, parallel_args)
             module.train()
     return pp_schedule
