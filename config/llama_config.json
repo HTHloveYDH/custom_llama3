@@ -15,7 +15,9 @@
         "tp": 1, 
         "pp": 1, 
 
-        "dp_shard" : false,
+        "dp_shard" : false, 
+        "mixed_precision_reduce": "float32", 
+        "mixed_precision_param": "float32", 
 
         "parallel_loss": false, 
         "async_tp": false, 
