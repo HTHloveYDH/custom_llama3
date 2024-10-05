@@ -193,6 +193,12 @@ def pipeline_llama_manual_split(
         models.append(model_chunk)
     return stages, models
 
+# loss function to be shared by Pipeline Parallel and SPMD training
+def loss_fn(pred, labels):
+    return torch.nn.functional.cross_entropy(
+        pred.flatten(0, 1), labels.flatten(0, 1)
+    )
+
 def _enable_pipeline_parallel(
         model:nn.Module,
         pp_mesh:DeviceMesh,
