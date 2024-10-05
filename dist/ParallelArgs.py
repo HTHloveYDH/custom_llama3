@@ -19,7 +19,7 @@ class ParallelArgs:
     # pipeline parallel config
     pipeline_parallel_schedule: str = "gpipe"
 
-    activation_checkpoint_mode: str = None,
+    activation_checkpoint_mode: str = None
     
     # rank
     dp_local_rank: int = 0
