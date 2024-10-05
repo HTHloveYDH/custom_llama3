@@ -6,6 +6,7 @@ import os
 from collections import defaultdict, OrderedDict
 
 import torch
+import torch.nn as nn
 from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import (
     checkpoint_wrapper as ptd_checkpoint_wrapper,
 )
@@ -13,18 +14,18 @@ from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import (
 from utils.logging import logger
 
 
-def get_num_params(model:torch.nn.Module, exclude_embedding:bool = False) -> int:
+def get_num_params(model:nn.Module, exclude_embedding:bool=False) -> int:
     num_params = sum(p.numel() for p in model.parameters())
     if exclude_embedding:
         num_params -= model.tok_embeddings.weight.numel()
     return num_params
 
-def get_num_flop_per_token(num_params:int, model_config, seq_len) -> int:
+def get_num_flop_per_token(num_params:int, model_args:ModelArg) -> int:
     l, h, q, t = (
-        model_config.n_layers,
-        model_config.n_heads,
-        model_config.dim // model_config.n_heads,
-        seq_len,
+        model_args.n_layers,
+        model_args.n_heads,
+        model_args.dim // model_args.n_heads,
+        model_args.max_seq_len,
     )
     # Reasoning behind the factor of 12 for the self-attention part of the formula:
     # 1. each self-attention has 2 matmul in the forward and 4 in the backward (6)
@@ -36,7 +37,7 @@ def get_num_flop_per_token(num_params:int, model_config, seq_len) -> int:
 
     return flop_per_token
 
-def enable_compile(model:torch.nn.Module):
+def enable_compile(model:nn.Module):
     """
     Apply torch.compile to each TransformerBlock, which makes compilation efficient due to
     repeated structure. Alternatively one can compile the whole model (after applying DP).
