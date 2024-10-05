@@ -7,7 +7,7 @@ from torch.distributed import DeviceMesh
 from torch.distributed._composable.fsdp import fully_shard, MixedPrecisionPolicy
 from torch.distributed._composable.replicate import replicate
 
-from models.ModelArgs import ModelArgs
+from dist.ParallelArgs import ParallelArgs
 from models.Transformer import Transformer as Llama
 from models.DPOLlama import DPOLlama
 from utils.logging import logger
@@ -89,10 +89,10 @@ def enable_ddp(
 
     logger.info("Applied DDP to the model")
 
-def data_parallelize_llama(model:nn.Module, dp_mesh:DeviceMesh, training:bool, parallel_args:ModelArgs):
+def data_parallelize_llama(model:nn.Module, dp_mesh:DeviceMesh, training:bool, parallel_args:ParallelArgs):
     return model
 
-def data_parallelize(model:nn.Module, dp_mesh:DeviceMesh, training:bool, parallel_args:ModelArgs):
+def data_parallelize(model:nn.Module, dp_mesh:DeviceMesh, training:bool, parallel_args:ParallelArgs):
     if isinstance(model, Llama):
         model = data_parallelize_llama(model, dp_mesh, training, parallel_args)
     elif isinstance(model, DPOLlama):
