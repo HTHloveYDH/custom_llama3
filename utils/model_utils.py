@@ -56,19 +56,19 @@ _save_list = {
     torch.ops._c10d_functional.reduce_scatter_tensor.default,
 }
 
-def _enable_ac_to_transformer_block(module:torch.nn.Module, ac_config):
+def _enable_ac_to_transformer_block(module:torch.nn.Module, parallel_args:ParallelArgs):
     valid_ac_modes = ("full", "selective")
-    if ac_config.mode not in valid_ac_modes:
+    if parallel_args.mode not in valid_ac_modes:
         raise ValueError(
-            f"Invalid AC mode: {ac_config.mode}. Valid modes: {valid_ac_modes}"
+            f"Invalid AC mode: {parallel_args.mode}. Valid modes: {valid_ac_modes}"
         )
 
-    if ac_config.mode == "full":
+    if parallel_args.mode == "full":
         return ptd_checkpoint_wrapper(module, preserve_rng_state=False)
 
-    assert ac_config.mode == "selective", f"{ac_config.mode}"
-    use_op_sac = ac_config.selective_ac_option == "op"
-    use_layer_sac = ac_config.selective_ac_option.isdigit()
+    assert parallel_args.mode == "selective", f"{parallel_args.mode}"
+    use_op_sac = parallel_args.selective_ac_option == "op"
+    use_layer_sac = parallel_args.selective_ac_option.isdigit()
     if not use_op_sac and not use_layer_sac:
         raise ValueError(
             f"Invalid selective AC option: {ac_config.selective_ac_option}. "
@@ -109,7 +109,7 @@ def _enable_ac_to_transformer_block(module:torch.nn.Module, ac_config):
         )
     elif use_layer_sac:
         # Checkpoint every `ac_freq` of the modules passed to this function
-        ac_freq = int(ac_config.selective_ac_option)
+        ac_freq = int(parallel_args.selective_ac_option)
         ptd_checkpoint_wrapper.__dict__.setdefault("_count", 0)
         ptd_checkpoint_wrapper._count += 1
         if not ac_freq or ptd_checkpoint_wrapper._count % ac_freq == 0:
@@ -117,10 +117,10 @@ def _enable_ac_to_transformer_block(module:torch.nn.Module, ac_config):
         else:
             return module
 
-def enable_activation_checkpoint(model:torch.nn.Module, mode:str):
+def enable_activation_checkpoint(model:torch.nn.Module, parallel_args:ParallelArgs):
     """Apply activation checkpointing to the model."""
     for layer_id, transformer_block in model.layers.named_children():
-        transformer_block = _enable_ac_to_transformer_block(transformer_block, ac_config)
+        transformer_block = _enable_ac_to_transformer_block(transformer_block, parallel_args)
         model.layers.register_module(layer_id, transformer_block)
 
     logger.info(f"Applied {mode} activation checkpointing to the model")
