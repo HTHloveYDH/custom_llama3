@@ -1,3 +1,5 @@
+import torch
+from torch.distributed import DeviceMesh
 from torch.distributed._tensor import Shard, Replicate
 from torch.distributed.tensor.parallel import (
     parallelize_module,
@@ -7,11 +9,13 @@ from torch.distributed.tensor.parallel import (
     SequenceParallel
 )
 
+from models.ModelArgs import ModelArgs
 from models.Transformer import Transformer as Llama
 from models.DPOLlama import DPOLlama
+from utils.logging import logger
 
 
-def tensor_parallelize_llama(model, tp_mesh, training:bool, parallel_loss:bool):
+def tensor_parallelize_llama(model, tp_mesh:DeviceMesh, training:bool, parallel_args:ModelArgs):
     # parallelize the first embedding and the last linear out projection
     layer_tp_plan = {
         'tok_embeddings': RowwiseParallel(
@@ -21,11 +25,11 @@ def tensor_parallelize_llama(model, tp_mesh, training:bool, parallel_loss:bool):
         'norm': SequenceParallel(),
         'output': ColwiseParallel(
             input_layouts=Shard(1),
-            output_layouts=Shard(-1) if parallel_loss else Replicate(), 
-            use_local_output=not parallel_loss
+            output_layouts=Shard(-1) if parallel_args.parallel_loss else Replicate(), 
+            use_local_output=not parallel_args.parallel_loss
         ),
     }
-    model = parallelize_module(model, tp_mesh, layer_tp_plan)
+    parallelize_module(model, tp_mesh, layer_tp_plan)
     for block_id, transformer_block in enumerate(model.layers):
         layer_tp_plan = {
             'attention_norm': SequenceParallel(),
@@ -56,16 +60,24 @@ def tensor_parallelize_llama(model, tp_mesh, training:bool, parallel_loss:bool):
             device_mesh=tp_mesh,
             parallelize_plan=layer_tp_plan
         )
+    if parallel_args.async_tp:
+        from torch.distributed._symmetric_memory import enable_symm_mem_for_group
+        torch._inductor.config._micro_pipeline_tp = True
+        enable_symm_mem_for_group(tp_mesh.get_group().group_name)
+    logger.info(
+        f"Applied {'Float8 ' if parallel_args.float8 else ''}{'Async ' if parallel_args.async_tp else ''}"
+        "Tensor Parallelism to the model"
+    )
     return model
 
-def tensor_parallelize(model, tp_mesh, training:bool, parallel_loss:bool):
-    assert not (parallel_loss and not training)
+def tensor_parallelize(model, tp_mesh:DeviceMesh, training:bool, parallel_args:ModelArgs):
+    assert not (parallel_args.parallel_loss and not training)
     if isinstance(model, Llama):
-        model = tensor_parallelize_llama(model, tp_mesh, training, parallel_loss)
+        model = tensor_parallelize_llama(model, tp_mesh, training, parallel_args)
     elif isinstance(model, DPOLlama):
         # TODO:
         assert training
         layer_tp_plan = {'value_head': ColwiseParallel()}
         model = parallelize_module(model, tp_mesh, layer_tp_plan)
-        model.llm = tensor_parallelize_llama(model.llm, tp_mesh, training)
+        model.llm = tensor_parallelize_llama(model.llm, tp_mesh, training, parallel_args)
     return model

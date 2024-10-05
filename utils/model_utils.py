@@ -10,16 +10,16 @@ from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import (
     checkpoint_wrapper as ptd_checkpoint_wrapper,
 )
 
-from dist.logging import logger
+from utils.logging import logger
 
 
-def get_num_params(model: torch.nn.Module, exclude_embedding: bool = False) -> int:
+def get_num_params(model:torch.nn.Module, exclude_embedding:bool = False) -> int:
     num_params = sum(p.numel() for p in model.parameters())
     if exclude_embedding:
         num_params -= model.tok_embeddings.weight.numel()
     return num_params
 
-def get_num_flop_per_token(num_params: int, model_config, seq_len) -> int:
+def get_num_flop_per_token(num_params:int, model_config, seq_len) -> int:
     l, h, q, t = (
         model_config.n_layers,
         model_config.n_heads,
@@ -36,7 +36,7 @@ def get_num_flop_per_token(num_params: int, model_config, seq_len) -> int:
 
     return flop_per_token
 
-def apply_compile(model: torch.nn.Module):
+def enable_compile(model:torch.nn.Module):
     """
     Apply torch.compile to each TransformerBlock, which makes compilation efficient due to
     repeated structure. Alternatively one can compile the whole model (after applying DP).
@@ -55,7 +55,7 @@ _save_list = {
     torch.ops._c10d_functional.reduce_scatter_tensor.default,
 }
 
-def _apply_ac_to_transformer_block(module: nn.Module, ac_config):
+def _enable_ac_to_transformer_block(module:torch.nn.Module, ac_config):
     valid_ac_modes = ("full", "selective")
     if ac_config.mode not in valid_ac_modes:
         raise ValueError(
@@ -116,13 +116,13 @@ def _apply_ac_to_transformer_block(module: nn.Module, ac_config):
         else:
             return module
 
-def apply_activation_checkpoint(model: torch.nn.Module, ac_config):
+def enable_activation_checkpoint(model:torch.nn.Module, mode:str):
     """Apply activation checkpointing to the model."""
     for layer_id, transformer_block in model.layers.named_children():
-        transformer_block = _apply_ac_to_transformer_block(transformer_block, ac_config)
+        transformer_block = _enable_ac_to_transformer_block(transformer_block, ac_config)
         model.layers.register_module(layer_id, transformer_block)
 
-    logger.info(f"Applied {ac_config.mode} activation checkpointing to the model")
+    logger.info(f"Applied {mode} activation checkpointing to the model")
 
 def convert(ckpt_path:str, format:str, save_dir:str, splits=3):
     import json

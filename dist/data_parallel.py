@@ -7,12 +7,13 @@ from torch.distributed import DeviceMesh
 from torch.distributed._composable.fsdp import fully_shard, MixedPrecisionPolicy
 from torch.distributed._composable.replicate import replicate
 
-from dist.logging import logger
+from models.ModelArgs import ModelArgs
 from models.Transformer import Transformer as Llama
 from models.DPOLlama import DPOLlama
+from utils.logging import logger
 
 
-def check_strided_sharding_enabled() -> None:
+def _check_strided_sharding_enabled() -> None:
     # Correct 2D/3D DCP usage requires DTensor's strided sharding in PR
     # https://github.com/pytorch/pytorch/pull/130760. This function checks if users'
     # PyTorch nightly-build version is newer than 2024-08-09 to make sure this PR is
@@ -33,13 +34,13 @@ def check_strided_sharding_enabled() -> None:
             "DCP usage."
         )
 
-def fsdp(
-    model: nn.Module,
-    dp_mesh: DeviceMesh,
-    param_dtype: torch.dtype,
-    reduce_dtype: torch.dtype,
-    tp_enabled: bool,
-    pp_enabled: bool,
+def apply_fsdp(
+    model:nn.Module,
+    dp_mesh:DeviceMesh,
+    param_dtype:torch.dtype,
+    reduce_dtype:torch.dtype,
+    tp_enabled:bool,
+    pp_enabled:bool,
 ):
     """
     Apply data parallelism to the model. FSDP2 is used here.
@@ -51,7 +52,7 @@ def fsdp(
     # that users won't use a nightly build which is older than 20240809 by then.
     if tp_enabled:
         # check if strided sharding is enabled, which is necessary for 2D/3D DCP
-        check_strided_sharding_enabled()
+        _check_strided_sharding_enabled()
 
     for layer_id, transformer_block in model.layers.items():
         if pp_enabled:
@@ -70,11 +71,11 @@ def fsdp(
     fully_shard(model, **fsdp_config, reshard_after_forward=not pp_enabled)
 
 
-def ddp(
-    model: nn.Module,
-    dp_mesh: DeviceMesh,
-    enable_compile: bool,
-    enable_compiled_autograd: bool,
+def apply_ddp(
+    model:nn.Module,
+    dp_mesh:DeviceMesh,
+    enable_compile:bool,
+    enable_compiled_autograd:bool,
 ):
     if enable_compile:
         if enable_compiled_autograd:
@@ -88,14 +89,14 @@ def ddp(
 
     logger.info("Applied DDP to the model")
 
-def data_parallelize_llama(model, pp_mesh):
+def data_parallelize_llama(model, dp_mesh:DeviceMesh, training:bool, parallel_args:ModelArgs):
     return model
 
-def data_parallelize(model, tp_mesh, training:bool):
+def data_parallelize(model, dp_mesh:DeviceMesh, training:bool, parallel_args:ModelArgs):
     if isinstance(model, Llama):
-        model = data_parallelize_llama(model, tp_mesh, training)
+        model = data_parallelize_llama(model, dp_mesh, training, parallel_args)
     elif isinstance(model, DPOLlama):
         # TODO:
-        model.llm = data_parallelize_llama(model.llm, tp_mesh, training)
+        model.llm = data_parallelize_llama(model.llm, dp_mesh, training, parallel_args)
     return model
     

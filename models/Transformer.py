@@ -5,13 +5,13 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torch.distributed.tensor.parallel import loss_parallel
 
-from config.ModelArgs import ModelArgs
+from models.ModelArgs import ModelArgs
 from models.modules import RoPE, RMSNorm, Attention, InfiniteAttention, TransformerBlock
 from models.lora import LoRAParametrization
 
 
 class Transformer(nn.Module):
-    def __init__(self, params: ModelArgs):
+    def __init__(self, params:ModelArgs):
         super().__init__()
         self.params = params
         self.tok_embeddings = nn.Embedding(params.vocab_size, params.dim)
@@ -67,32 +67,32 @@ class Transformer(nn.Module):
             'llama2_7B': dict(
                 dim=4096, n_layers=32, n_heads=32, n_kv_heads=32, vocab_size=32000,
                 multiple_of=256, ffn_dim_multiplier=1.3, norm_eps=1e-5, rope_theta=10000.0,
-                max_batch_size=32, max_seq_len=2048
+                max_batch_size=32, max_seq_len=2048, long_term_memory=False, norm_type='rmsnorm'
             ),  # 7B parameters
             'llama2_13B': dict(
                 dim=5120, n_layers=40, n_heads=40, n_kv_heads=40, vocab_size=32000,
                 multiple_of=256, ffn_dim_multiplier=1.3, norm_eps=1e-5, rope_theta=10000.0,
-                max_batch_size=32, max_seq_len=2048
+                max_batch_size=32, max_seq_len=2048, long_term_memory=False, norm_type='rmsnorm'
             ),  # 13B parameters
             'llama2_70B': dict(
                 dim=8192, n_layers=80, n_heads=64, n_kv_heads=8, vocab_size=32000,
                 multiple_of=4096, ffn_dim_multiplier=1.3, norm_eps=1e-5, rope_theta=10000.0,
-                max_batch_size=32, max_seq_len=2048
+                max_batch_size=32, max_seq_len=2048, long_term_memory=False, norm_type='rmsnorm'
             ),  # 70B parameters
             'llama3_8B': dict(
                 dim=4096, n_layers=32, n_heads=32, n_kv_heads=8, vocab_size=128256,
                 multiple_of=1024, ffn_dim_multiplier=1.3, norm_eps=1e-5, rope_theta=500000.0,
-                max_batch_size=32, max_seq_len=2048
+                max_batch_size=32, max_seq_len=2048, long_term_memory=False, norm_type='rmsnorm'
             ),  # 8B parameters
             'llama3_70B': dict(
                 dim=8192, n_layers=80, n_heads=64, n_kv_heads=8, vocab_size=128256,
                 multiple_of=4096, ffn_dim_multiplier=1.3, norm_eps=1e-5, rope_theta=500000.0,
-                max_batch_size=32, max_seq_len=2048
+                max_batch_size=32, max_seq_len=2048, long_term_memory=False, norm_type='rmsnorm'
             ),  # 70B parameters
             'llama3_405B': dict(
                 dim=16384, n_layers=126, n_heads=128, n_kv_heads=8, vocab_size=128256,
                 multiple_of=None, ffn_dim_multiplier=1.3, norm_eps=1e-5, rope_theta=500000.0,
-                max_batch_size=32, max_seq_len=2048
+                max_batch_size=32, max_seq_len=2048, long_term_memory=False, norm_type='rmsnorm'
             ),  # 405B parameters
         }.get(llama_config['model_type'], {})
         # create llama3 by custom configuration
@@ -186,7 +186,7 @@ class Transformer(nn.Module):
         # LoRAParametrization.enable_disable_lora(self, True)
         LoRAParametrization.freeze_non_lora_weights(self)
 
-    def train(self, mode: bool = True):
+    def train(self, mode:bool=True):
         super().train(mode)
         for module in self.modules():
             if isinstance(module, (Attention, InfiniteAttention)):

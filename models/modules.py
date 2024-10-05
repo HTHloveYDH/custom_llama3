@@ -5,12 +5,13 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-from config.ModelArgs import ModelArgs
+from models.ModelArgs import ModelArgs
+from models.TritonFusedRMSNorm import TritonFusedRMSNorm
 
 
 class RoPE:
     @staticmethod
-    def precompute_freqs_cis(dim:int, seq_len: int, theta: float=10000.0, device='cpu'):
+    def precompute_freqs_cis(dim:int, seq_len:int, theta:float=10000.0, device='cpu'):
         freqs = 1.0 / (theta ** (torch.arange(0, dim, 2, device=device)[:(dim // 2)].float() / dim))
         t = torch.arange(seq_len, dtype=torch.float32, device=device)
         freqs = torch.outer(t, freqs).to(device)
@@ -20,7 +21,7 @@ class RoPE:
         return freqs_cis
 
     @staticmethod
-    def reshape_for_broadcast(freqs_cis: torch.Tensor, x: torch.Tensor):
+    def reshape_for_broadcast(freqs_cis:torch.Tensor, x:torch.Tensor):
         ndim = x.ndim
         assert 0 <= 1 < ndim
         assert freqs_cis.shape == (x.shape[1], x.shape[-1]), 'Last two dimensions of freqs_cis need to be compatible with x.'
@@ -28,7 +29,7 @@ class RoPE:
         return freqs_cis.view(*shape)
 
     @staticmethod
-    def apply_rotary_emb(xq: torch.Tensor, xk: torch.Tensor, freqs_cis: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def apply_rotary_emb(xq:torch.Tensor, xk:torch.Tensor, freqs_cis:torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         xq_ = torch.view_as_complex(xq.float().reshape(*xq.shape[:-1], -1, 2))  # xq_ shape: [bsz, seq_len, n_heads, head_dim / 2]
         xk_ = torch.view_as_complex(xk.float().reshape(*xk.shape[:-1], -1, 2))  # xk_ shape: [bsz, seq_len, n_heads, head_dim / 2]
 
@@ -39,7 +40,7 @@ class RoPE:
         return xq_out.type_as(xq), xk_out.type_as(xk)
 
 class RMSNorm(nn.Module):
-    def __init__(self, dim: int, eps: float=1e-6):
+    def __init__(self, dim:int, eps:float=1e-6):
         super().__init__()
         self.eps = eps
         # scale factor (namely, gamma)，defaults to torch.ones(dim)
@@ -48,14 +49,36 @@ class RMSNorm(nn.Module):
     def _norm(self, x):
         return x * torch.rsqrt(x.pow(2).mean(dim=-1, keepdim=True) + self.eps)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x:torch.Tensor):
         # shape: x[bs,seq,dim]
         output = self._norm(x.float()).type_as(x)
         # shape: x[bs,seq,dim] -> x_norm[bs,seq,dim]
         return output * self.weight
+    
+    def reset_parameters(self):
+        torch.nn.init.ones_(self.weight)  # type: ignore
+
+class FusedRMSNorm(nn.Module):
+    """Fused RMS Norm, wraps a fused Triton Kernel"""
+
+    def __init__(self, dim:int, eps:float=1e-6):
+        super().__init__()
+        self.eps = eps
+        self.weight = nn.Parameter(torch.ones(dim))
+
+    def _norm(self, x):
+        return TritonFusedRMSNorm.apply(x, self.weight, self.eps)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """leverages Triton Fused RMS Norm kernel"""
+        output = self._norm(x.float()).type_as(x)
+        return output
+
+    def reset_parameters(self):
+        torch.nn.init.ones_(self.weight)  # type: ignore
 
 class Attention(nn.Module):
-    def __init__(self, args: ModelArgs):
+    def __init__(self, args:ModelArgs):
         super().__init__()
         self.args = args
         self.dim = args.dim
@@ -68,7 +91,7 @@ class Attention(nn.Module):
         self.wv = nn.Linear(self.dim, self.n_kv_heads * self.head_dim, bias=False)
         self.wo = nn.Linear(self.n_heads * self.head_dim, self.dim, bias=False)
 
-    def forward(self, x: torch.Tensor, start_pos: int, freqs_cis: torch.Tensor):
+    def forward(self, x:torch.Tensor, start_pos:int, freqs_cis:torch.Tensor):
         # x shape: [bsz, seq_len, dim]
         bsz, seq_len, _ = x.shape
         # causal mask is necessary in training mode
@@ -183,7 +206,7 @@ class Attention(nn.Module):
         )  # O(1), efficient
 
 class InfiniteAttention(Attention):
-    def __init__(self, args: ModelArgs):
+    def __init__(self, args:ModelArgs):
         super().__init__(args)
         self.args = args
         self.dim = args.dim
@@ -204,7 +227,7 @@ class InfiniteAttention(Attention):
             'z', torch.zeros(self.args.max_batch_size, self.n_heads, self.head_dim, 1)
         )
 
-    def forward(self, x: torch.Tensor, start_pos: int, freqs_cis: torch.Tensor):
+    def forward(self, x:torch.Tensor, start_pos:int, freqs_cis:torch.Tensor):
         # x shape: [bsz, seq_len, dim]
         bsz, seq_len, _ = x.shape
         # causal mask is necessary in training mode
@@ -291,7 +314,7 @@ class InfiniteAttention(Attention):
         self.z.zero_()
 
 class FeedForward(nn.Module):
-    def __init__(self, dim:int, hidden_dim:int, multiple_of:int, ffn_dim_multiplier: Optional[float]):
+    def __init__(self, dim:int, hidden_dim:int, multiple_of:int, ffn_dim_multiplier:Optional[float]):
         super().__init__()
         self.dim = dim
         # hidden_dim should be divisable by 256
@@ -303,12 +326,12 @@ class FeedForward(nn.Module):
         self.w2 = nn.Linear(hidden_dim, self.dim, bias=False)
         self.w3 = nn.Linear(self.dim, hidden_dim, bias=False)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x:torch.Tensor):
         # shape: [bsz,seq_len,dim]
         return self.w2(F.silu(self.w1(x)) * self.w3(x))
 
 class TransformerBlock(nn.Module):
-    def __init__(self, args: ModelArgs):
+    def __init__(self, args:ModelArgs):
         super().__init__()
         self.args = args
         self.attention_norm = RMSNorm(dim=args.dim, eps=args.norm_eps)
@@ -316,10 +339,13 @@ class TransformerBlock(nn.Module):
             self.attention = InfiniteAttention(args)
         else:
             self.attention = Attention(args)
-        self.ff_norm = RMSNorm(dim=args.dim, eps=args.norm_eps)
+        if args.norm_type == 'fused_rmsnorm':
+            self.ff_norm = FusedRMSNorm(dim=args.dim, eps=args.norm_eps)
+        else:
+            self.ff_norm = RMSNorm(dim=args.dim, eps=args.norm_eps)
         self.feedforward = FeedForward(args.dim, 4 * args.dim, args.multiple_of, args.ffn_dim_multiplier)
 
-    def forward(self, x: torch.Tensor, start_pos: int, freqs_cis: torch.Tensor):
+    def forward(self, x:torch.Tensor, start_pos:int, freqs_cis:torch.Tensor):
         # start_pos: start posotion in inference mode
         # 1) input embedding to attention_norm,
         #    and attention_norm output is transfered to attention

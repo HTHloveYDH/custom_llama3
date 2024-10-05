@@ -3,9 +3,11 @@ import os
 import torch
 from torch.distributed import init_process_group, destroy_process_group
 from torch.distributed.device_mesh import init_device_mesh
+from torch.distributed import DeviceMesh
 
 from dist.ParallelArgs import ParallelArgs
 from dist.device import get_devices
+
 
 def _create_device_mesh(dist:dict, device_type:str):
     device_mesh = None
@@ -18,7 +20,7 @@ def _create_device_mesh(dist:dict, device_type:str):
     device_mesh = init_device_mesh(device_type, dims, mesh_dim_names=dim_names)
     return device_mesh
 
-def _get_ranks(dist:dict, device_mesh):
+def _get_ranks(dist:dict, device_mesh:DeviceMesh):
     ranks = {}
     for key in ['dp', 'tp', 'pp']:
         if dist[key] > 1:
@@ -50,7 +52,7 @@ def init_dist(dist:dict):
     local_rank = int(os.environ['LOCAL_RANK'])
     world_size = int(os.environ['WORLD_SIZE']) 
     assert world_size == dist['dp'] * dist['tp'] * dist['pp']
-    master_process = global_rank == 0 # this process will do logging, checkpointing etc.
+    master_process = global_rank == 0  # this process will do logging, checkpointing etc.
     # added after video, pytorch can be serious about it's device vs. device_type distinction
     device = f'cuda:{local_rank}'
     torch.cuda.set_device(device)

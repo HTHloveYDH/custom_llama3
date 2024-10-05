@@ -17,3 +17,5 @@ class ModelArgs:
     max_seq_len: int = 256            # max seqence length  
 
     long_term_memory: bool = False
+
+    norm_type: str = "rmsnorm"

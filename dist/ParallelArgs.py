@@ -10,7 +10,11 @@ class ParallelArgs:
     
     # other configs
     dp_shard: bool = False
+
     parallel_loss: bool = False
+    async_tp: bool = False
+    float8: bool = False
+
     pipeline_parallel_schedule: str = "gpipe"
 
     # rank
