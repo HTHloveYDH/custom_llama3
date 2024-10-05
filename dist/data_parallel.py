@@ -34,7 +34,7 @@ def _check_strided_sharding_enabled() -> None:
             "DCP usage."
         )
 
-def apply_fsdp(
+def enable_fsdp(
     model:nn.Module,
     dp_mesh:DeviceMesh,
     param_dtype:torch.dtype,
@@ -71,7 +71,7 @@ def apply_fsdp(
     fully_shard(model, **fsdp_config, reshard_after_forward=not pp_enabled)
 
 
-def apply_ddp(
+def enable_ddp(
     model:nn.Module,
     dp_mesh:DeviceMesh,
     enable_compile:bool,
@@ -89,10 +89,10 @@ def apply_ddp(
 
     logger.info("Applied DDP to the model")
 
-def data_parallelize_llama(model, dp_mesh:DeviceMesh, training:bool, parallel_args:ModelArgs):
+def data_parallelize_llama(model:nn.Module, dp_mesh:DeviceMesh, training:bool, parallel_args:ModelArgs):
     return model
 
-def data_parallelize(model, dp_mesh:DeviceMesh, training:bool, parallel_args:ModelArgs):
+def data_parallelize(model:nn.Module, dp_mesh:DeviceMesh, training:bool, parallel_args:ModelArgs):
     if isinstance(model, Llama):
         model = data_parallelize_llama(model, dp_mesh, training, parallel_args)
     elif isinstance(model, DPOLlama):
