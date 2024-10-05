@@ -8,15 +8,19 @@ class ParallelArgs:
     tp: int = 1
     pp: int = 1
     
-    # other configs
+    # data parallel config
     dp_shard: bool = False
 
+    # tensor parallel config
     parallel_loss: bool = False
     async_tp: bool = False
     float8: bool = False
 
+    # pipeline parallel config
     pipeline_parallel_schedule: str = "gpipe"
 
+    activation_checkpoint_mode: str = None,
+    
     # rank
     dp_local_rank: int = 0
     dp_global_rank: int = 0
