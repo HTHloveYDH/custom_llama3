@@ -11,6 +11,7 @@ from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import (
     checkpoint_wrapper as ptd_checkpoint_wrapper,
 )
 
+from dist.ParallelArgs import ParallelArgs
 from models.ModelArgs import ModelArgs
 from utils.logging import logger
 
@@ -21,7 +22,7 @@ def get_num_params(model:nn.Module, exclude_embedding:bool=False) -> int:
         num_params -= model.tok_embeddings.weight.numel()
     return num_params
 
-def get_num_flop_per_token(num_params:int, model_args:ModelArg) -> int:
+def get_num_flop_per_token(num_params:int, model_args:ModelArgs) -> int:
     l, h, q, t = (
         model_args.n_layers,
         model_args.n_heads,
@@ -57,7 +58,7 @@ _save_list = {
     torch.ops._c10d_functional.reduce_scatter_tensor.default,
 }
 
-def _enable_ac_to_transformer_block(module:torch.nn.Module, parallel_args:ParallelArgs):
+def _enable_ac_to_transformer_block(module:nn.Module, parallel_args:ParallelArgs):
     valid_ac_modes = ("full", "selective")
     if parallel_args.mode not in valid_ac_modes:
         raise ValueError(
@@ -118,7 +119,7 @@ def _enable_ac_to_transformer_block(module:torch.nn.Module, parallel_args:Parall
         else:
             return module
 
-def enable_activation_checkpoint(model:torch.nn.Module, parallel_args:ParallelArgs):
+def enable_activation_checkpoint(model:nn.Module, parallel_args:ParallelArgs):
     """Apply activation checkpointing to the model."""
     for layer_id, transformer_block in model.layers.named_children():
         transformer_block = _enable_ac_to_transformer_block(transformer_block, parallel_args)
