@@ -24,6 +24,7 @@
         "float8": false, 
 
         "pipeline_parallel_schedule": "gpipe", 
+        "pipeline_parallel_microbatches": 2, 
 
         "activation_checkpoint_mode": null,
         "compile": false
