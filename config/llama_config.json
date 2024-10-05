@@ -3,15 +3,12 @@
     "pos_encode": "rope", 
     "tokenizer_path": "./tokenizer/llama3/tokenizer.model", 
 
-    "use_compile": false,
     "load_weights": null,
     "ckpt_path": "", 
 
     "lora": false, 
     "lora_alpha": 1,
     "lora_rank": 1, 
-
-    "activation_checkpoint_mode": null,
     
     "compile": false, 
 
@@ -26,7 +23,10 @@
         "async_tp": false, 
         "float8": false, 
 
-        "pipeline_parallel_schedule": "gpipe"
+        "pipeline_parallel_schedule": "gpipe", 
+
+        "activation_checkpoint_mode": null,
+    
     },
 
     "params": {
