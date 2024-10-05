@@ -35,6 +35,7 @@ def main():
     assert not (dist['dp_shard'] and dp == 1)
     assert not (dist['parallel_loss'] and tp == 1)
     assert not (dist['parallel_loss'] and dp > 1)
+    assert not (dp > 1 and not dist['dp_shard']) and (tp > 1 or pp > 1)
     tokenizer_path = llama_config['tokenizer_path']
     lora = llama_config['lora']
     # train configs
