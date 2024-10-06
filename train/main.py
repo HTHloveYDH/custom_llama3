@@ -106,7 +106,7 @@ def main():
     ''' ____________________________________ build & compile model ___________________________________ '''
     kwargs = {'learning_rate': learning_rate, 'weight_decay': weight_decay}
     model, optimizer = get_model(llama_config, device, **kwargs)
-    pp_schedule = parallelize_model(model, parallel_args, device_mesh, True)
+    modules, pp_schedule = parallelize_model(model, parallel_args, device_mesh, True)
 
     ''' ____________________________________________ train ___________________________________________ '''
     # get tokenizer
@@ -121,13 +121,14 @@ def main():
         print(f'epoch: {epoch} / {epochs}:')
         # train llm for one epoch
         train_on_epoch(
-            model, pp_schedule, train_data_loader, optimizer, device, steps_per_epoch, 
-            grad_accum_steps, epoch, log_interval, parallel_args, master_process
+            model, modules, train_data_loader, optimizer, device, steps_per_epoch, 
+            grad_accum_steps, epoch, log_interval, parallel_args, master_process, 
+            pp_schedule
         )
         # validate current weights on validation dataset shard of current process
         valid_on_epoch(
-            model, pp_schedule, val_data_loader, device, val_steps, epoch, parallel_args, 
-            master_process, lora
+            model, modules, val_data_loader, device, val_steps, epoch, parallel_args, 
+            master_process, lora, pp_schedule
         )
         # generate sentences to verify current weights in the master process
         if master_process and not tp > 1:
