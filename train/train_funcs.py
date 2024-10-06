@@ -41,8 +41,8 @@ def pp_st_backward_pass(loss, parallel_args:ParallelArgs):
         loss.backward()
 
 def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch:int, \
-                      grad_accum_steps:int, epoch:int, log_interval:int, parallel_args:ParallelArgs, \
-                      master_process:bool):
+                      grad_accum_steps:int, epoch:int, log_interval:int, \
+                      parallel_args:ParallelArgs, master_process:bool, pp_schedule):
     model.train()
     loss_tracker = []
     device_type = get_device_type(device)
@@ -82,8 +82,9 @@ def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch
             print(f'[train] cost {batch_time}s for one batch')
 
 @torch.no_grad()
-def st_valid_on_epoch(model, data_loader, device:str, val_steps:int, epoch:int, \
-                      parallel_args:ParallelArgs, master_process:bool, lora:bool):
+def st_valid_on_epoch(model, data_loader, device:str, val_steps:int, \
+                      epoch:int, parallel_args:ParallelArgs, \
+                      master_process:bool, lora:bool, pp_schedule):
     model.eval()
     val_loss_tracker = []
     device_type = get_device_type(device)
@@ -140,8 +141,8 @@ def dpo_backward_pass(loss, parallel_args:ParallelArgs):
         loss.backward()
 
 def dpo_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch:int, \
-                       grad_accum_steps:int, epoch:int, log_interval:int, parallel_args:ParallelArgs, \
-                       master_process:bool):
+                       grad_accum_steps:int, epoch:int, log_interval:int, \
+                       parallel_args:ParallelArgs, master_process:bool, pp_schedule):
     # TODO: add pipeline parallel for DPO
     assert parallel_args.pp == 1
     model.train()
@@ -176,8 +177,9 @@ def dpo_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoc
             print(f'[train] cost {batch_time}s for one batch')
 
 @torch.no_grad()
-def dpo_valid_on_epoch(model, data_loader, device:str, val_steps:int, epoch:int, \
-                       parallel_args:ParallelArgs, master_process:bool, lora:bool):
+def dpo_valid_on_epoch(model, data_loader, device:str, val_steps:int, \
+                       epoch:int, parallel_args:ParallelArgs, \
+                       master_process:bool, lora:bool, pp_schedule):
     # TODO: add pipeline parallel for DPO
     assert parallel_args.pp == 1
     model.eval()
