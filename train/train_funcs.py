@@ -25,12 +25,22 @@ def st_backward_pass(loss, parallel_args:ParallelArgs):
     else:
         loss.backward()
 
-def pp_st_forward_pass(model, x, y, parallel_args:ParallelArgs):
-    logits = model(x)
-    if parallel_args.dp > 1:
-        loss = model.module.compute_loss(logits, y, parallel_args.tp > 1, parallel_args.parallel_loss)
+def pp_st_forward_pass(pp_schedule, parallel_args:ParallelArgs):
+    # Pipeline Parallel forward / backward inside step() call
+    is_last_stage = parallel_args.pp_local_rank == parallel_args.pp - 1
+    if parallel_args.pp_local_rank == 0:
+        pp_schedule.step(input_ids)
+    elif is_last_stage:
+        losses = []
+        pp_schedule.step(target=labels, losses=losses)
     else:
-        loss = model.compute_loss(logits, y, parallel_args.tp > 1, parallel_args.parallel_loss)
+        pp_schedule.step()
+    # accumulate losses across pipeline microbatches
+    loss = (
+        torch.mean(torch.stack(losses))
+        if is_last_stage
+        else torch.Tensor([-1.0])
+    )
     return loss
 
 def pp_st_backward_pass(loss, parallel_args:ParallelArgs):
@@ -57,7 +67,7 @@ def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch
             model.require_backward_grad_sync = ((step + 1) % grad_accum_steps == 0)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
             if parallel_args.pp > 1:
-                loss = pp_st_forward_pass(model, x, y, parallel_args)
+                loss = pp_st_forward_pass(pp_schedule, parallel_args)
             else:
                 loss = st_forward_pass(model, x, y, parallel_args)
         loss_accum = loss.detach()
