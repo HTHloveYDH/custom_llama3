@@ -33,3 +33,6 @@ class ParallelArgs:
     tp_global_rank: int = 0
     pp_local_rank: int = 0
     pp_global_rank: int = 0
+
+    # device
+    device: str = "cuda:0"
