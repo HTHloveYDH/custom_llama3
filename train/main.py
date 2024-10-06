@@ -121,14 +121,14 @@ def main():
         print(f'epoch: {epoch} / {epochs}:')
         # train llm for one epoch
         train_on_epoch(
-            model, modules, train_data_loader, optimizer, device, steps_per_epoch, 
-            grad_accum_steps, epoch, log_interval, parallel_args, master_process, 
-            pp_schedule
+            modules if pp > 1 else model, train_data_loader, optimizer, device, 
+            steps_per_epoch, grad_accum_steps, epoch, log_interval, parallel_args, 
+            master_process, pp_schedule
         )
         # validate current weights on validation dataset shard of current process
         valid_on_epoch(
-            model, modules, val_data_loader, device, val_steps, epoch, parallel_args, 
-            master_process, lora, pp_schedule
+            modules if pp > 1 else model, val_data_loader, device, val_steps, 
+            epoch, parallel_args, master_process, lora, pp_schedule
         )
         # generate sentences to verify current weights in the master process
         if master_process and not tp > 1:
