@@ -27,6 +27,7 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
     pp_mesh = None if parallel_args.pp == 1 else device_mesh['pp']
     # 2D parallel (tp + dp)
     if pp_mesh is None:
+        modules = [model]
         pp_schedule = None
         if tp_mesh is not None:
             assert not (parallel_args.async_tp and not parallel_args.compile), ‘Async TP requires --parallel_args.compile’
@@ -72,4 +73,4 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
             if dp_mesh is not None:
                 enable_data_parallel(module, dp_mesh, training, parallel_args)
             module.train()
-    return model, pp_schedule
+    return modules, pp_schedule
