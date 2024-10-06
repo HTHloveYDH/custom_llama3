@@ -98,7 +98,6 @@ def pipeline_llama_manual_split(
         whole_model:nn.Module,
         pp_mesh:DeviceMesh,
         parallel_args:ParallelArgs,
-        device:DeviceType,
         model_args:ModelArgs,
     ):
     """
@@ -164,7 +163,7 @@ def pipeline_llama_manual_split(
             model,
             stage_idx,
             num_stages,
-            device,
+            parallel_args.device,
             input_args=input.chunk(microbatches)[0],
             output_args=output.chunk(microbatches)[0],
             group=pp_mesh.get_group("pp"),
@@ -203,12 +202,11 @@ def _enable_pipeline_parallel(
         model:nn.Module,
         pp_mesh:DeviceMesh,
         parallel_args:ParallelArgs,
-        device:str,
         model_args:ModelArgs,
         loss_fn:Callable[..., torch.Tensor]
     ):
     stages, models = pipeline_llama_manual_split(
-        model, pp_mesh, parallel_args, parallel_args, device, model_args
+        model, pp_mesh, parallel_args, parallel_args, model_args
     )
     pp_schedule = build_pipeline_schedule(parallel_args, stages, loss_fn)
     return pp_schedule, models
@@ -218,12 +216,11 @@ def enable_pipeline_parallel(
         pp_mesh:DeviceMesh, 
         training:bool, 
         parallel_args:ParallelArgs,
-        device:str,
         model_args:ModelArgs
     ):
     assert isinstance(model, Llama)
     pp_schedule, modules = _enable_pipeline_parallel(
-        model, pp_mesh, parallel_args, device, model_args, loss_fn
+        model, pp_mesh, parallel_args, model_args, loss_fn
     )
     # TODO:
     return pp_schedule, modules
