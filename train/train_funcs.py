@@ -44,11 +44,7 @@ def pp_st_forward_pass(pp_schedule, parallel_args:ParallelArgs):
     return loss
 
 def pp_st_backward_pass(loss, parallel_args:ParallelArgs):
-    if parallel_args.parallel_loss:
-        with loss_parallel():
-            loss.backward()
-    else:
-        loss.backward()
+    pass
 
 def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch:int, \
                       grad_accum_steps:int, epoch:int, log_interval:int, \
