@@ -203,7 +203,7 @@ def _enable_pipeline_parallel(
         model:nn.Module,
         pp_mesh:DeviceMesh,
         parallel_args:ParallelArgs,
-        device:DeviceType,
+        device:str,
         model_args:ModelArgs,
         loss_fn:Callable[..., torch.Tensor]
     ):
@@ -218,7 +218,7 @@ def enable_pipeline_parallel(
         pp_mesh:DeviceMesh, 
         training:bool, 
         parallel_args:ParallelArgs,
-        device:DeviceType,
+        device:str,
         model_args:ModelArgs
     ):
     assert isinstance(model, Llama)
