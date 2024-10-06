@@ -53,7 +53,12 @@ def pp_st_backward_pass(loss, parallel_args:ParallelArgs):
 def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch:int, \
                       grad_accum_steps:int, epoch:int, log_interval:int, \
                       parallel_args:ParallelArgs, master_process:bool, pp_schedule):
-    model.train()
+    # set to training mode
+    if isinstance(model, list):
+        for module in model:
+            module.train()
+    else:
+        model.train()
     loss_tracker = []
     device_type = get_device_type(device)
     parallel = parallel_args.dp > 1 or parallel_args.tp > 1 or parallel_args.pp > 1
@@ -97,7 +102,12 @@ def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch
 def st_valid_on_epoch(model, data_loader, device:str, val_steps:int, \
                       epoch:int, parallel_args:ParallelArgs, \
                       master_process:bool, lora:bool, pp_schedule):
-    model.eval()
+    # set to evaluation mode
+    if isinstance(model, list):
+        for module in model:
+            module.eval()
+    else:
+        model.eval()
     val_loss_tracker = []
     device_type = get_device_type(device)
     parallel = parallel_args.dp > 1 or parallel_args.tp > 1 or parallel_args.pp > 1
