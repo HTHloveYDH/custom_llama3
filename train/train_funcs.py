@@ -259,3 +259,6 @@ def resume_from_ckpt(model, ckpt_dir:str):
         checkpoint = torch.load(checkpoint_path)
         model.load_state_dict(checkpoint['model'])
     return model
+
+def _clip_norm():
+    pass
