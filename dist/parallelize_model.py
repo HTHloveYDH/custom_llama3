@@ -72,5 +72,5 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
                 enable_compile(module)
             if dp_mesh is not None:
                 enable_data_parallel(module, dp_mesh, training, parallel_args)
-            module.train()
+            # module.train()
     return modules, pp_schedule
