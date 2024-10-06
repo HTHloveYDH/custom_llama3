@@ -260,7 +260,7 @@ def resume_from_ckpt(model, ckpt_dir:str):
         model.load_state_dict(checkpoint['model'])
     return model
 
-def _clip_norm(model, max_norm:float):
+def _clip_norm(model, max_norm:float=1.0):
     if isinstance(model, list):
         modules = model
     elif isinstance(model, nn.Module):
