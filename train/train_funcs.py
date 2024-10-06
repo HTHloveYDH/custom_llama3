@@ -260,5 +260,13 @@ def resume_from_ckpt(model, ckpt_dir:str):
         model.load_state_dict(checkpoint['model'])
     return model
 
-def _clip_norm():
-    pass
+def _clip_norm(model, parallel_args:ParallelArgs):
+    if isinstance(model, list):
+        modules = model
+    elif isinstance(model, nn.Module):
+        modules = [model]
+    # clip gradients
+    for module in modules:
+        torch.nn.utils.clip_grad_norm_(
+            module.parameters(), parallel_args.max_norm, foreach=True
+        )
