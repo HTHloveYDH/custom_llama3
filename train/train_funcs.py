@@ -61,6 +61,8 @@ def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch
             else:
                 loss = st_forward_pass(model, x, y, parallel_args)
         loss_accum = loss.detach()
+        # clip gradient norm
+        _clip_grad_norm(model, max_norm=1.0)
         # backward
         if parallel_args.pp > 1:
             pp_st_backward_pass(loss, parallel_args)
@@ -159,6 +161,8 @@ def dpo_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoc
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
             loss = dpo_forward_pass(model, x_winner, x_loser, parallel_args)
         loss_accum = loss.detach()
+        # clip gradient norm
+        _clip_grad_norm(model, max_norm=1.0)
         # backward
         dpo_backward_pass(loss, parallel_args)
         if parallel and not parallel_args.parallel_loss:
@@ -260,7 +264,7 @@ def resume_from_ckpt(model, ckpt_dir:str):
         model.load_state_dict(checkpoint['model'])
     return model
 
-def _clip_norm(model, max_norm:float=1.0):
+def _clip_grad_norm(model, max_norm:float=1.0):
     if isinstance(model, list):
         modules = model
     elif isinstance(model, nn.Module):
