@@ -265,6 +265,8 @@ def _clip_norm(model, max_norm:float=1.0):
         modules = model
     elif isinstance(model, nn.Module):
         modules = [model]
+    else:
+        modules = [model.module]
     # clip gradients
     for module in modules:
         torch.nn.utils.clip_grad_norm_(
