@@ -45,6 +45,7 @@ def init_dist(dist:dict):
         print(f'using device: {device}')
         device_type = 'cuda' if device.startswith('cuda') else 'cpu'
         device_mesh = None
+        dist.update({'device': device})
         parallel_args = ParallelArgs(**dist)
         return master_process, device, device_mesh, parallel_args
     init_process_group(backend='nccl')
@@ -60,6 +61,7 @@ def init_dist(dist:dict):
     device_type = 'cuda' if device.startswith('cuda') else 'cpu'
     device_mesh = _create_device_mesh(dist, device_type)
     dist.update(_get_ranks(dist, device_mesh))
+    dist.update({'device': device})
     parallel_args = ParallelArgs(**dist)
     return master_process, device, device_mesh, parallel_args
 
