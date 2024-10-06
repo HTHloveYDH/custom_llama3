@@ -206,7 +206,7 @@ def _enable_pipeline_parallel(
         loss_fn:Callable[..., torch.Tensor]
     ):
     stages, models = pipeline_llama_manual_split(
-        model, pp_mesh, parallel_args, parallel_args, model_args
+        model, pp_mesh, parallel_args, model_args
     )
     pp_schedule = build_pipeline_schedule(parallel_args, stages, loss_fn)
     return pp_schedule, models
