@@ -57,7 +57,7 @@ def main():
 
     ''' ____________________________________ build & compile model ___________________________________ '''
     model, _ = get_model(llama_config, device, False)
-    _, _ = parallelize_model(model, parallel_args, device_mesh, False)
+    model, _, _ = parallelize_model(model, parallel_args, device_mesh, False)
 
     ''' ____________________________________________ test ___________________________________________ '''
     # _, _ = generate(model, prompt, gen_batch_size, gen_len, temperature, top_p, device=device)

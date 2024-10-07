@@ -107,7 +107,7 @@ def main():
     ''' ____________________________________ build & compile model ___________________________________ '''
     kwargs = {'learning_rate': learning_rate, 'weight_decay': weight_decay}
     model, optimizer = get_model(llama_config, device, True, **kwargs)
-    modules, pp_schedule = parallelize_model(model, parallel_args, device_mesh, True)
+    model, modules, pp_schedule = parallelize_model(model, parallel_args, device_mesh, True)
 
     ''' ____________________________________________ train ___________________________________________ '''
     # get tokenizer

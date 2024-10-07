@@ -26,7 +26,6 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
     pp_mesh = None if parallel_args.pp == 1 else device_mesh['pp']
     # 2D parallel (tp + dp)
     if pp_mesh is None:
-        modules = [model]
         pp_schedule = None
         if tp_mesh is not None:
             assert not (parallel_args.async_tp and not parallel_args.compile), 'Async TP requires --parallel_args.compile'
@@ -50,6 +49,7 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
             else:
                 assert tp_mesh is None and pp_mesh is None, 'DDP has not supported > 1D parallelism'
                 model = DDP(model, device_ids=[parallel_args.device])
+        modules = [model]
     # 3D parallel (pp + tp + dp)
     else:
         pp_schedule, modules = enable_pipeline_parallel(
@@ -72,4 +72,4 @@ def parallelize_model(model:nn.Module, parallel_args:ParallelArgs, device_mesh, 
             if dp_mesh is not None:
                 enable_data_parallel(module, dp_mesh, training, parallel_args)
             # module.train()
-    return modules, pp_schedule
+    return model, modules, pp_schedule
