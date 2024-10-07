@@ -12,7 +12,6 @@ from torch.distributed.fsdp.wrap import (
     wrap,
 )
 
-from config.torch_config import TORCH_DTYPE_MAP
 from dist.ParallelArgs import ParallelArgs
 from dist.data_parallel import enable_data_parallel
 from dist.tensor_parallel import enable_tensor_parallel
