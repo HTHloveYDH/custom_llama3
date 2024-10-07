@@ -24,11 +24,11 @@ def _get_ranks(dist:dict, device_mesh:DeviceMesh):
     ranks = {}
     for key in ['dp', 'tp', 'pp']:
         if dist[key] > 1:
-            ranks[key + 'local_rank'] = device_mesh[key].get_local_rank()
-            ranks[key + 'global_rank'] = device_mesh[key].get_rank()
+            ranks[key + '_local_rank'] = device_mesh[key].get_local_rank()
+            ranks[key + '_global_rank'] = device_mesh[key].get_rank()
         else:
-            ranks[key + 'local_rank'] = 0
-            ranks[key + 'global_rank'] = 0
+            ranks[key + '_local_rank'] = 0
+            ranks[key + '_global_rank'] = 0
     return ranks
 
 def init_dist(dist:dict):
