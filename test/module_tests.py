@@ -65,7 +65,11 @@ def AttentionTEST(arg_map):
         print(f'keys.shape: {keys.shape}')
         attention = Attention(arg_map)
         attention.to(device)
-        x_out = attention(x_norm, start_pos=0)
+        freqs_cis = RoPE.precompute_freqs_cis(
+            attention.args.dim // attention.args.n_heads, 
+            attention.args.max_seq_len * 2, attention.args.rope_theta
+        )  # (use 2x max sequence length to be safe)
+        x_out = attention(x_norm, start_pos=0, freqs_cis=freqs_cis.to(device))
         print(f'[Attention] x_out.shape: {x_out.shape}')
         print(f'[Attention] AttentionTEST on device: {device} passed')
 
@@ -86,7 +90,11 @@ def InfiniteAttentionTEST(arg_map):
         print(f'keys.shape: {keys.shape}')
         attention = InfiniteAttention(arg_map)
         attention.to(device)
-        x_out = attention(x_norm, start_pos=0)
+        freqs_cis = RoPE.precompute_freqs_cis(
+            attention.args.dim // attention.args.n_heads, 
+            attention.args.max_seq_len * 2, attention.args.rope_theta
+        )  # (use 2x max sequence length to be safe)
+        x_out = attention(x_norm, start_pos=0, freqs_cis=freqs_cis.to(device))
         attention.reset_memory()
         print(f'[InfiniteAttention] x_out.shape: {x_out.shape}')
         print(f'[InfiniteAttention] InfiniteAttentionTEST on device: {device} passed')
@@ -113,7 +121,11 @@ def TransformerBlockTEST(arg_map):
         x = torch.randn((arg_map.max_batch_size, arg_map.max_seq_len, arg_map.dim), device=device)
         transformer_block = TransformerBlock(arg_map)
         transformer_block.to(device)
-        transformer_block_out = transformer_block(x,start_pos=0)
+        freqs_cis = RoPE.precompute_freqs_cis(
+            transformer_block.args.dim // transformer_block.args.n_heads, 
+            transformer_block.args.max_seq_len * 2, transformer_block.args.rope_theta
+        )  # (use 2x max sequence length to be safe)
+        transformer_block_out = transformer_block(x, start_pos=0, freqs_cis=freqs_cis.to(device))
         print(f'[TransformerBlock] transformer_block_out.shape: {transformer_block_out.shape}')
         print(f'[TransformerBlock] TransformerBlockTEST on device: {device} passed')
 
