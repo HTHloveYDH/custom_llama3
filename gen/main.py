@@ -6,6 +6,7 @@ import statistics
 import torch
 sys.path.append(os.getcwd())
 from dist.distribute import init_dist, ternimate_dist
+from dist.parallelize_model import parallelize_model
 from data_pipeline.get_tokenizer import get_tokenizer
 from models.get_model import get_model
 # from gen.demo import generate
@@ -55,7 +56,7 @@ def main():
     torch.set_float32_matmul_precision('high')
 
     ''' ____________________________________ build & compile model ___________________________________ '''
-    model, _ = get_model(llama_config, device)
+    model, _ = get_model(llama_config, device, False)
     _, _ = parallelize_model(model, parallel_args, device_mesh, False)
 
     ''' ____________________________________________ test ___________________________________________ '''

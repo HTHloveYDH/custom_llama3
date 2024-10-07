@@ -6,6 +6,7 @@ import torch
 
 sys.path.append(os.getcwd())
 from dist.distribute import init_dist, ternimate_dist
+from dist.parallelize_model import parallelize_model
 # from data_pipeline.demo import DemoDataLoader
 from data_pipeline.get_tokenizer import get_tokenizer
 from data_pipeline.DataLoaderLiteFactory import DataLoaderLiteFactory
@@ -105,7 +106,7 @@ def main():
 
     ''' ____________________________________ build & compile model ___________________________________ '''
     kwargs = {'learning_rate': learning_rate, 'weight_decay': weight_decay}
-    model, optimizer = get_model(llama_config, device, **kwargs)
+    model, optimizer = get_model(llama_config, device, True, **kwargs)
     modules, pp_schedule = parallelize_model(model, parallel_args, device_mesh, True)
 
     ''' ____________________________________________ train ___________________________________________ '''

@@ -7,7 +7,7 @@ from models.DPOLlama import DPOLlama
 from models.utils import get_num_params, get_num_flop_per_token
 
 
-def get_model(llama_config:dict, device:str, **kwargs):
+def get_model(llama_config:dict, device:str, training:bool, **kwargs):
     assert llama_config['load_weights'] in ['official', 'local', None], f"load weights: {llama_config['load_weights']}  is not supported"
     # create model
     if llama_config['load_weights'] == 'official':

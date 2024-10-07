@@ -24,6 +24,7 @@ class ParallelArgs:
     pipeline_parallel_microbatches: int = 2
 
     activation_checkpoint_mode: str = None
+    selective_ac_option: str = 'op'
     compile: bool = False
     
     # rank

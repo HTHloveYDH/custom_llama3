@@ -3,6 +3,7 @@ import time
 from collections import OrderedDict
 
 import torch
+import torch.nn as nn
 import torch.distributed as dist
 from torch.distributed.tensor.parallel import loss_parallel
 
@@ -25,14 +26,14 @@ def st_backward_pass(loss, parallel_args:ParallelArgs):
     else:
         loss.backward()
 
-def pp_st_forward_pass(pp_schedule, parallel_args:ParallelArgs):
+def pp_st_forward_pass(pp_schedule, x, y, parallel_args:ParallelArgs):
     # Pipeline Parallel forward / backward inside step() call
     is_last_stage = parallel_args.pp_local_rank == parallel_args.pp - 1
     if parallel_args.pp_local_rank == 0:
-        pp_schedule.step(input_ids)
+        pp_schedule.step(x)
     elif is_last_stage:
         losses = []
-        pp_schedule.step(target=labels, losses=losses)
+        pp_schedule.step(target=y, losses=losses)
     else:
         pp_schedule.step()
     # accumulate losses across pipeline microbatches
@@ -68,7 +69,7 @@ def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch
             model.require_backward_grad_sync = ((step + 1) % grad_accum_steps == 0)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
             if parallel_args.pp > 1:
-                loss = pp_st_forward_pass(pp_schedule, parallel_args)
+                loss = pp_st_forward_pass(pp_schedule, x, y, parallel_args)
             else:
                 loss = st_forward_pass(model, x, y, parallel_args)
         loss_accum = loss.detach()
