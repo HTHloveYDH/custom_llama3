@@ -6,7 +6,7 @@ import torch.nn as nn
 
 sys.path.append(os.getcwd())
 from data_pipeline.Tokenizer import Tokenizer, ChatFormat
-from config.ModelArgs import ModelArgs
+from models.ModelArgs import ModelArgs
 from models.modules import RoPE, RMSNorm, Attention, InfiniteAttention, FeedForward, TransformerBlock
 from models.Transformer import Transformer
 # from data_pipeline.demo import DemoDataLoader
