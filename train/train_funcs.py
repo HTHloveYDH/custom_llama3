@@ -115,9 +115,9 @@ def st_valid_on_epoch(model, data_loader, device:str, val_steps:int, \
         x, y = x.to(device), y.to(device)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
             if parallel_args.pp > 1:
-                loss = st_forward_pass(model, x, y, parallel_args)
-            else:
                 loss = pp_st_forward_pass(model, x, y, parallel_args)
+            else:
+                loss = st_forward_pass(model, x, y, parallel_args)
         loss = loss / val_steps
         val_loss_accum += loss.detach()
     if parallel and not parallel_args.parallel_loss:
@@ -212,19 +212,7 @@ def dpo_valid_on_epoch(model, data_loader, device:str, val_steps:int, \
         x_winner, x_loser = data_loader.next_batch()
         x_winner, x_loser = x_winner.to(device), x_loser.to(device)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
-            winner_values, winner_logits = model(x_winner)
-            loser_values, loser_logits = model(x_loser)
-            # compute dpo loss
-            if parallel_args.dp > 1:
-                # loss = model.module.dpo_loss(winner_values.mean(dim=-1), loser_values.mean(dim=-1))
-                loss = model.module.dpo_loss(
-                    winner_values[:, -1], loser_values[:, -1], parallel_args.tp > 1
-                )
-            else:
-                # loss = model.dpo_loss(winner_values.mean(dim=-1), loser_values.mean(dim=-1))
-                loss = model.dpo_loss(
-                    winner_values[:, -1], loser_values[:, -1], parallel_args.tp > 1
-                )
+            loss = dpo_forward_pass(model, x_winner, x_loser, parallel_args)
         loss = loss / val_steps
         val_loss_accum += loss.detach()
     if parallel and not parallel_args.parallel_loss:
