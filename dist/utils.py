@@ -45,7 +45,7 @@ def _enable_ac_to_transformer_block(module:nn.Module, parallel_args:ParallelArgs
     if not use_op_sac and not use_layer_sac:
         raise ValueError(
             f'Invalid selective AC option: {parallel_args.selective_ac_option}. '
-            f'Valid options: 'op' or a positive int representing layer frequency'
+            f"Valid options: 'op' or a positive int representing layer frequency"
         )
     if use_op_sac:
         from torch.utils.checkpoint import (
