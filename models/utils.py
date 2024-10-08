@@ -28,4 +28,3 @@ def get_num_flop_per_token(num_params:int, model_args:ModelArgs) -> int:
     # 4. we follow the convention and do not account for sparsity in causal attention
     flop_per_token = 6 * num_params + 12 * l * h * q * t
     return flop_per_token
-  

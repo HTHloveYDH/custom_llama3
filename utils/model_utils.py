@@ -43,7 +43,7 @@ def convert(ckpt_path:str, format:str, save_dir:str, splits=3):
         save_file(state_dict_split, os.path.join(save_dir, f'./model_split_{splits}_of_{splits}.safetensors'))
         # create model.safetensors.index.json
         with open(os.path.join(save_dir, 'model.safetensors.index.json'), 'w') as f:
-            f.
+            json.dump(json_content, f)
 
     with open('./config/llama_config.json', 'r') as f:
         llama_config = json.load(f)
