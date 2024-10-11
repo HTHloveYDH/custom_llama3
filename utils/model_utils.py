@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 
 
-def convert(ckpt_path:str, format:str, save_dir:str, splits=3):
+def convert(ckpt_path:str, format:str, save_dir:str, splits=4):
     import json
 
     from models.Transformer import Transformer
@@ -33,14 +33,17 @@ def convert(ckpt_path:str, format:str, save_dir:str, splits=3):
         for i in range(splits - 1):
             state_dict_split = OrderedDict()
             for j in range(i * T, (i + 1) * T):
-                json_content['weight_map'][keys[j]] = f'model_split_{i + 1}_of_{splits}.safetensors'
+                json_content['weight_map'][keys[j]] = f'model-0000{i + 1}-of-0000{splits}.safetensors'
                 state_dict_split[keys[j]] = state_dict[keys[j]]
-            save_file(state_dict_split, os.path.join(save_dir, f'./model_split_{i + 1}_of_{splits}.safetensors'))
+            save_file(state_dict_split, os.path.join(save_dir, f'./model-0000{i + 1}-of-0000{splits}.safetensors'))
+            torch.save(state_dict_split, f'pytorch_model-0000{i + 1}-of-0000{splits}.bin')
         # for last split
+        state_dict_split = OrderedDict()
         for j in range((splits - 1) * T, len(keys)):
-            json_content['weight_map'][keys[j]] = f'model_split_{splits}_of_{splits}.safetensors'
+            json_content['weight_map'][keys[j]] = f'model-0000{splits}-of-0000{splits}.safetensors'
             state_dict_split[keys[j]] = state_dict[keys[j]]
-        save_file(state_dict_split, os.path.join(save_dir, f'./model_split_{splits}_of_{splits}.safetensors'))
+        save_file(state_dict_split, os.path.join(save_dir, f'./model-0000{splits}-of-0000{splits}.safetensors'))
+        torch.save(state_dict_split, f'pytorch_model-0000{splits}-of-0000{splits}.bin')
         # create model.safetensors.index.json
         with open(os.path.join(save_dir, 'model.safetensors.index.json'), 'w') as f:
             json.dump(json_content, f)
