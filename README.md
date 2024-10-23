@@ -68,10 +68,44 @@ python test/module_tests.py
 
 ## env configuration:
 
-### env pytorch
+### base pytorch env
 
 ```bash
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+pip install transformers==4.44.0
+
+pip install tiktoken==0.7.0
+
+pip install blobfile==3.0.0
+
+pip install tqdm==4.66.5
+```
+
+### faiss env
+
+```bash
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+pip install faiss==
+
+pip install transformers==4.44.0
+
+pip install tiktoken==0.7.0
+
+pip install blobfile==3.0.0
+
+pip install tqdm==4.66.5
+```
+
+### fairscale env
+
+```bash
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+pip install fairscale==
+
+pip install fire==
 
 pip install transformers==4.44.0
 
