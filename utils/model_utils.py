@@ -34,10 +34,12 @@ def convert(ckpt_path:str, format:str, save_dir:str, splits=4):
                 state_dict_split[keys[j]] = state_dict[keys[j]]
             metadata = {'format': 'pt'}
             save_file(
-                state_dict_split, os.path.join(save_dir, f'./model-0000{i + 1}-of-0000{splits}.safetensors'), 
+                state_dict_split, os.path.join(save_dir, f'model-0000{i + 1}-of-0000{splits}.safetensors'), 
                 metadata=metadata
             )
-            torch.save(state_dict_split, f'pytorch_model-0000{i + 1}-of-0000{splits}.bin')
+            torch.save(
+                state_dict_split, os.path.join(save_dir, f'pytorch_model-0000{i + 1}-of-0000{splits}.bin')
+            )
         # for last split
         state_dict_split = OrderedDict()
         for j in range((splits - 1) * T, len(keys)):
@@ -45,10 +47,12 @@ def convert(ckpt_path:str, format:str, save_dir:str, splits=4):
             state_dict_split[keys[j]] = state_dict[keys[j]]
         metadata = {'format': 'pt'}
         save_file(
-            state_dict_split, os.path.join(save_dir, f'./model-0000{splits}-of-0000{splits}.safetensors'), 
+            state_dict_split, os.path.join(save_dir, f'model-0000{splits}-of-0000{splits}.safetensors'), 
             metadata=metadata
         )
-        torch.save(state_dict_split, f'pytorch_model-0000{splits}-of-0000{splits}.bin')
+        torch.save(
+            state_dict_split, os.path.join(save_dir, f'pytorch_model-0000{splits}-of-0000{splits}.bin')
+        )
         # create model.safetensors.index.json
         with open(os.path.join(save_dir, 'model.safetensors.index.json'), 'w') as f:
             json.dump(json_content, f)
