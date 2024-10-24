@@ -336,7 +336,7 @@ https://pytorch.org/docs/stable/distributed.tensor.parallel.html
 
 ### huggingface safetensors to llama.cpp gguf format
 
-https://github.com/ggerganov/llama.cpp/discussions/2948
+https://huggingface.co/docs/transformers/main/en/gguf
 
 ### useful links about Transformer
 
@@ -355,4 +355,4 @@ https://github.com/hkproj/pytorch-lora
 
 https://github.com/pytorch/torchtitan/tree/main
 
-https://github.com/ggerganov/llama.cpp/discussions/2948
+https://huggingface.co/docs/transformers/main/en/gguf
