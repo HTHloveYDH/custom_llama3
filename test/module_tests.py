@@ -186,6 +186,22 @@ def ChatFormatTEST():
         print(f"decode result: {text}")
     print(f'[ChatFormat] ChatFormatTEST passed')
 
+def RegularityTEST():
+    input_file = './model.safetensors.index.json' 
+    output_file = './converted_model.safetensors.index.json' 
+    with open(input_file, 'r') as f:
+        data = json.load(f)
+    new_data = {
+        'metadata': data['metadata'],
+        'weight_map': {}
+    }
+    for key, value in data['weight_map'].items():
+        new_key = replace_key(key)
+        new_data['weight_map'][new_key] = value
+    with open(output_file, 'w') as f:
+        json.dump(new_data, f, indent=2)
+    print(f'[RegularityTEST] RegularityTEST passed')
+
 
 if __name__ == '__main__':
     arg_map = ModelArgs()
