@@ -33,24 +33,6 @@ def replace_key(key):
                 return replacement
     return key
 
-def transform_json(input_file, output_file):
-    with open(input_file, 'r') as f:
-        data = json.load(f)
-    
-    # 创建新的字典来存储转换后的数据
-    new_data = {
-        'metadata': data['metadata'],
-        'weight_map': {}
-    }
-    
-    # 转换weight_map中的键
-    for key, value in data['weight_map'].items():
-        new_key = replace_key(key)
-        new_data['weight_map'][new_key] = value
-    
-    with open(output_file, 'w') as f:
-        json.dump(new_data, f, indent=2)
-
 def convert(ckpt_path:str, format:str, save_dir:str, splits=4):
     from models.Transformer import Transformer
     
@@ -75,8 +57,8 @@ def convert(ckpt_path:str, format:str, save_dir:str, splits=4):
         for i in range(splits - 1):
             state_dict_split = OrderedDict()
             for j in range(i * T, (i + 1) * T):
-                json_content['weight_map'][keys[j]] = f'model-0000{i + 1}-of-0000{splits}.safetensors'
-                state_dict_split[keys[j]] = state_dict[keys[j]]
+                json_content['weight_map'][replace_key(keys[j])] = f'model-0000{i + 1}-of-0000{splits}.safetensors'
+                state_dict_split[replace_key(keys[j])] = state_dict[replace_key(keys[j])]
             metadata = {'format': 'pt'}
             save_file(
                 state_dict_split, os.path.join(save_dir, f'model-0000{i + 1}-of-0000{splits}.safetensors'), 
@@ -88,8 +70,8 @@ def convert(ckpt_path:str, format:str, save_dir:str, splits=4):
         # for last split
         state_dict_split = OrderedDict()
         for j in range((splits - 1) * T, len(keys)):
-            json_content['weight_map'][keys[j]] = f'model-0000{splits}-of-0000{splits}.safetensors'
-            state_dict_split[keys[j]] = state_dict[keys[j]]
+            json_content['weight_map'][replace_key(keys[j])] = f'model-0000{splits}-of-0000{splits}.safetensors'
+            state_dict_split[replace_key(keys[j])] = state_dict[replace_key(keys[j])]
         metadata = {'format': 'pt'}
         save_file(
             state_dict_split, os.path.join(save_dir, f'model-0000{splits}-of-0000{splits}.safetensors'), 
