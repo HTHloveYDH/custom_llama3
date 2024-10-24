@@ -334,6 +334,10 @@ The package (torch.distributed) needs to be initialized using the torch.distribu
 
 https://pytorch.org/docs/stable/distributed.tensor.parallel.html
 
+### huggingface safetensors to llama.cpp gguf format
+
+https://github.com/ggerganov/llama.cpp/discussions/2948
+
 ### useful links about Transformer
 
 https://huggingface.co/docs/transformers/main/model_doc/llama2
@@ -350,3 +354,5 @@ https://github.com/bojone/rerope?tab=readme-ov-file
 https://github.com/hkproj/pytorch-lora
 
 https://github.com/pytorch/torchtitan/tree/main
+
+https://github.com/ggerganov/llama.cpp/discussions/2948
