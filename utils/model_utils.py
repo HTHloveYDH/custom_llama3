@@ -1,10 +1,55 @@
 import os
 import json
+import re
 from collections import OrderedDict
 
 import torch
 import torch.nn as nn
 
+
+# rules
+replacement_rules = {
+    r'^tok_embeddings\.weight$': 'model.embed_tokens.weight',
+    r'^layers\.(\d+)\.attention_norm\.weight$': r'model.layers.\1.input_layernorm.weight',
+    r'^layers\.(\d+)\.attention\.wq\.weight$': r'model.layers.\1.self_attn.q_proj.weight',
+    r'^layers\.(\d+)\.attention\.wk\.weight$': r'model.layers.\1.self_attn.k_proj.weight',
+    r'^layers\.(\d+)\.attention\.wv\.weight$': r'model.layers.\1.self_attn.v_proj.weight',
+    r'^layers\.(\d+)\.attention\.wo\.weight$': r'model.layers.\1.self_attn.o_proj.weight',
+    r'^layers\.(\d+)\.ff_norm\.weight$': r'model.layers.\1.post_attention_layernorm.weight',
+    r'^layers\.(\d+)\.feedforward\.w1\.weight$': r'model.layers.\1.mlp.gate_proj.weight',
+    r'^layers\.(\d+)\.feedforward\.w2\.weight$': r'model.layers.\1.mlp.down_proj.weight',
+    r'^layers\.(\d+)\.feedforward\.w3\.weight$': r'model.layers.\1.mlp.up_proj.weight',
+    r'^norm\.weight$': 'model.norm.weight',
+    r'^output\.weight$': 'model.lm_head.weight'
+}
+
+def replace_key(key):
+    for pattern, replacement in replacement_rules.items():
+        match = re.match(pattern, key)
+        if match:
+            if len(match.groups()) > 0:
+                return re.sub(pattern, replacement, key)
+            else:
+                return replacement
+    return key
+
+def transform_json(input_file, output_file):
+    with open(input_file, 'r') as f:
+        data = json.load(f)
+    
+    # 创建新的字典来存储转换后的数据
+    new_data = {
+        'metadata': data['metadata'],
+        'weight_map': {}
+    }
+    
+    # 转换weight_map中的键
+    for key, value in data['weight_map'].items():
+        new_key = replace_key(key)
+        new_data['weight_map'][new_key] = value
+    
+    with open(output_file, 'w') as f:
+        json.dump(new_data, f, indent=2)
 
 def convert(ckpt_path:str, format:str, save_dir:str, splits=4):
     from models.Transformer import Transformer
