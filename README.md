@@ -87,7 +87,7 @@ pip install tqdm==4.66.5
 ```bash
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
-pip install faiss==
+pip install faiss-cpu==1.8.0.post1
 
 pip install transformers==4.44.0
 
