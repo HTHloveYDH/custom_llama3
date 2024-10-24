@@ -103,9 +103,9 @@ pip install tqdm==4.66.5
 ```bash
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
-pip install fairscale==
+pip install fairscale==0.4.13
 
-pip install fire==
+pip install fire==0.7.0
 
 pip install transformers==4.44.0
 
