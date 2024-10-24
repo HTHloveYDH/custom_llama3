@@ -188,8 +188,8 @@ def ChatFormatTEST():
     print(f'[ChatFormat] ChatFormatTEST passed')
 
 def RegularityTEST():
-    input_file = './model.safetensors.index.json' 
-    output_file = './converted_model.safetensors.index.json' 
+    input_file = './test/model.safetensors.index.json' 
+    output_file = './test/converted_model.safetensors.index.json' 
     with open(input_file, 'r') as f:
         data = json.load(f)
     new_data = {
