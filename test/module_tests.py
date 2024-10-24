@@ -9,6 +9,7 @@ from data_pipeline.Tokenizer import Tokenizer, ChatFormat
 from models.ModelArgs import ModelArgs
 from models.modules import RoPE, RMSNorm, Attention, InfiniteAttention, FeedForward, TransformerBlock
 from models.Transformer import Transformer
+from utils.model_utils import replace_key
 # from data_pipeline.demo import DemoDataLoader
 
 
@@ -215,5 +216,6 @@ if __name__ == '__main__':
     # DemoDataLoaderTEST(arg_map)
     TokenizerTEST()
     ChatFormatTEST()
+    RegularityTEST()
     print('\n')
     print('==================== all tests passed ====================')
