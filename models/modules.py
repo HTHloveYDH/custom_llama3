@@ -357,3 +357,17 @@ class TransformerBlock(nn.Module):
         out = h + self.feedforward(self.ff_norm(h))
         # shape: [bsz, seq_len, dim]
         return out
+
+class IdentityAttention(nn.Module):
+    def __init__(self):
+        super().__init__()
+    
+    def forward(self, x:torch.Tensor, start_pos:int, freqs_cis:torch.Tensor):
+        return x
+
+class IdentityMLP(nn.Module):
+    def __init__(self):
+        super().__init__()
+    
+    def forward(self, x:torch.Tensor):
+        return x
