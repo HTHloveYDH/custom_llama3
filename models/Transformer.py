@@ -187,22 +187,21 @@ class Transformer(nn.Module):
         # LoRAParametrization.enable_disable_lora(self, True)
         LoRAParametrization.freeze_non_lora_weights(self)
 
-    def _drop_layers(self, attn_list:list, mlp_list:list):
-        attn_list.sort()
-        for i, idx in enumerate(attn_list):
-            self.layers[idx - i].attention = IdentityAttention()
-        mlp_list.sort()
-        for i, idx in enumerate(mlp_list):
-            self.layers[idx - i].feedforward = IdentityMLP()
+    def _drop_blocks(self, block_list:list):
+        block_list.sort()
+        for i, idx in enumerate(block_list):
+            self.layers.pop(idx - i)
 
-    def _drop_blocks(self, blocks:list):
-        for i in blocks:
-            self.layers.pop(i)
+    def _drop_layers(self, attn_list:list, mlp_list:list):
+        for i in attn_list:
+            self.layers[i].attention = IdentityAttention()
+        for i in mlp_list:
+            self.layers[i].feedforward = IdentityMLP()
 
     def drop_modules(self, attn_list:list, mlp_list:list):
         block_list = list(set(mlp_list) & set(attn_list))  # common_indices
-        mlp_list = list(set(mlp_list) - set(block_list))
         attn_list = list(set(attn_list) - set(block_list))
+        mlp_list = list(set(mlp_list) - set(block_list))
         self._drop_blocks(block_list)
         self._drop_layers(attn_list, mlp_list)
 
