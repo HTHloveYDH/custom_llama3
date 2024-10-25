@@ -204,6 +204,14 @@ def RegularityTEST():
         json.dump(new_data, f, indent=2)
     print(f'[RegularityTEST] RegularityTEST passed')
 
+def DropModulesTEST():
+    for device in ['cpu', 'cuda:0']:
+        model = Transformer(arg_map).to(device)
+        print('[Drop Modules] before drop: ', model)
+        model.drop_modules(attn_list=[0, 2, 3], mlp_list=[0, 3])
+        print('[Drop Modules] after drop: ', model)
+        print(f'[Drop Modules] DropModulesTEST on device: {device} passed')
+
 
 if __name__ == '__main__':
     arg_map = ModelArgs()
@@ -218,5 +226,6 @@ if __name__ == '__main__':
     TokenizerTEST()
     ChatFormatTEST()
     RegularityTEST()
+    DropModulesTEST()
     print('\n')
     print('==================== all tests passed ====================')
