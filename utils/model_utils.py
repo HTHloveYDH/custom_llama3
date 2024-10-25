@@ -20,7 +20,7 @@ replacement_rules = {
     r'^layers\.(\d+)\.feedforward\.w2\.weight$': r'model.layers.\1.mlp.down_proj.weight',
     r'^layers\.(\d+)\.feedforward\.w3\.weight$': r'model.layers.\1.mlp.up_proj.weight',
     r'^norm\.weight$': 'model.norm.weight',
-    r'^output\.weight$': 'model.lm_head.weight'
+    r'^output\.weight$': 'lm_head.weight'
 }
 
 def replace_key(key):
