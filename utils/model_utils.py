@@ -58,7 +58,7 @@ def convert(ckpt_path:str, format:str, save_dir:str, splits=4):
             state_dict_split = OrderedDict()
             for j in range(i * T, (i + 1) * T):
                 json_content['weight_map'][replace_key(keys[j])] = f'model-0000{i + 1}-of-0000{splits}.safetensors'
-                state_dict_split[replace_key(keys[j])] = state_dict[replace_key(keys[j])]
+                state_dict_split[replace_key(keys[j])] = state_dict[keys[j]]
             metadata = {'format': 'pt'}
             save_file(
                 state_dict_split, os.path.join(save_dir, f'model-0000{i + 1}-of-0000{splits}.safetensors'), 
@@ -71,7 +71,7 @@ def convert(ckpt_path:str, format:str, save_dir:str, splits=4):
         state_dict_split = OrderedDict()
         for j in range((splits - 1) * T, len(keys)):
             json_content['weight_map'][replace_key(keys[j])] = f'model-0000{splits}-of-0000{splits}.safetensors'
-            state_dict_split[replace_key(keys[j])] = state_dict[replace_key(keys[j])]
+            state_dict_split[replace_key(keys[j])] = state_dict[keys[j]]
         metadata = {'format': 'pt'}
         save_file(
             state_dict_split, os.path.join(save_dir, f'model-0000{splits}-of-0000{splits}.safetensors'), 
