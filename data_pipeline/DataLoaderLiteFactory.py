@@ -7,19 +7,19 @@ from data_pipeline.data_loader.DPODataLoaderLite import BaseDPODataLoaderLite
 class DataLoaderLiteFactory:
     classname_map = {
         True: {
-            'base': BaseDPODataLoaderLite
+            'dpo_base': BaseDPODataLoaderLite
         },
         False: {
             True: {
-                'instruction': InstructionSFTDataLoaderLite,
-                'dialog': DialogSFTDataLoaderLite
+                'stf_instruction': InstructionSFTDataLoaderLite,
+                'sft_dialog': DialogSFTDataLoaderLite
             },
             False: {
-                'npy': NpyPTDataLoaderLite,
-                'txt': TxtPTDataLoaderLite,
-                'npy_v2': NpyPTDataLoaderLiteV2,
-                'txt_v2': TxtPTDataLoaderLiteV2,
-                'json_v2': JsonPTDataLoaderLiteV2
+                'pt_npy': NpyPTDataLoaderLite,
+                'pt_txt': TxtPTDataLoaderLite,
+                'pt_npy_v2': NpyPTDataLoaderLiteV2,
+                'pt_txt_v2': TxtPTDataLoaderLiteV2,
+                'pt_json_v2': JsonPTDataLoaderLiteV2
             }
         }
     }
@@ -40,7 +40,8 @@ class DataLoaderLiteFactory:
     def create(self, align:bool, dialog:bool, data_format:str, **kwargs):
         assert dialog in [True, False]
         assert data_format in [
-            'npy', 'txt', 'npy_v2', 'txt_v2', 'json_v2', 'instruction', 'dialog', 'base'
+            'pt_npy', 'pt_txt', 'pt_npy_v2', 'pt_txt_v2', 'pt_json_v2', 'stf_instruction', 
+            'sft_dialog', 'dpo_base'
         ]
         if align:
             classname = DataLoaderLiteFactory.classname_map[align][data_format]

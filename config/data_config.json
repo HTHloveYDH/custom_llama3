@@ -1,5 +1,5 @@
 {
     "data_root": "./data/pt/txt", 
-    "data_format": "txt", 
+    "data_format": "pt_txt", 
     "total_token_num": 65536
 }
