@@ -76,7 +76,7 @@ class TxtPTDataLoaderLiteV2(BasePTDataLoaderLiteV2):
         with open(filename, 'r') as f:
             text_lines = f.readlines()  # ['xxx', ...]
         # data format: list = ['xxx', ...]
-        data = text_lines
+        data = [x.strip() for x in text_lines]
         return data
 
 class JsonPTDataLoaderLiteV2(BasePTDataLoaderLiteV2):
