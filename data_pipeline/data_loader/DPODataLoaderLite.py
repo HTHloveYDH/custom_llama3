@@ -41,14 +41,8 @@ class BaseDPODataLoaderLite(BaseDataLoaderLite):
     def load_batch_tokens(self, data:list):
         batch_winner_prompt_tokens = []
         batch_loser_output_tokens = []
-        for dialog in data:
+        for dpo_sample in data:
             # dialog: {'prompt': 'xxx', 'winner_response': 'xxx', 'loser_response': 'xxx'}
-            winner_prompt_tokens = self.tokenizer.encode(
-                dialog['winner_response'], bos=True, eos=True, pad=True, max_len=self.T
-            )  # list
-            loser_output_tokens = self.tokenizer.encode(
-                dialog['loser_response'], bos=True, eos=True, pad=True, max_len=self.T
-            )  # list
             dialog = [
                 {
                     'role': 'system', 
@@ -56,10 +50,18 @@ class BaseDPODataLoaderLite(BaseDataLoaderLite):
                 }, 
                 {
                     'role': 'user', 
-                    'content': dialog['prompt']
+                    'content': dpo_sample['prompt']
                 }
             ]
-            prompt_tokens = self.chat_format.encode_dialog_prompt(dialog, True, self.T)  # list
+            prompt_tokens = self.chat_format.encode_dialog_prompt(dialog)  # list
+            winner_prompt_tokens = self.tokenizer.encode(
+                dpo_sample['winner_response'], bos=True, eos=True, pad=True, 
+                max_len=self.T - len(prompt_tokens)
+            )  # list
+            loser_output_tokens = self.tokenizer.encode(
+                dpo_sample['loser_response'], bos=True, eos=True, pad=True, 
+                max_len=self.T - len(prompt_tokens)
+            )  # list
             winner_prompt_tokens = prompt_tokens + winner_prompt_tokens
             loser_output_tokens = prompt_tokens + loser_output_tokens
             batch_winner_prompt_tokens.append(torch.tensor(winner_prompt_tokens, dtype=torch.long))

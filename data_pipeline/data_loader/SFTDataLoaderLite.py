@@ -50,8 +50,8 @@ class InstructionSFTDataLoaderLite(BaseSFTDataLoaderLite):
         )
     
     def load_batch_tokens(self, data:list):
-        batch_prompt_tokens = []
-        batch_output_tokens = []
+        batch_x_tokens = []
+        batch_y_tokens = []
         for dialog in data:
             # dialog: {'instruction': 'xxx', 'input': 'xxx', 'output': 'xxx'}
             dialog = [
@@ -68,13 +68,15 @@ class InstructionSFTDataLoaderLite(BaseSFTDataLoaderLite):
                     'content': dialog['output']
                 }
             ]
-            prompt_tokens = self.chat_format.encode_dialog_prompt(dialog[:-1], True, self.T)  # list
-            batch_prompt_tokens.append(torch.tensor(prompt_tokens, dtype=torch.long))
+            prompt_tokens = self.chat_format.encode_dialog_prompt(dialog[:-1])  # list
             output_tokens = self.tokenizer.encode(
-                dialog[-1]['content'], bos=True, eos=True, pad=True, max_len=self.T
+                dialog[-1]['content'], bos=True, eos=True, pad=True, 
+                max_len=self.T - len(prompt_tokens)
             )
-            batch_output_tokens.append(torch.tensor(output_tokens, dtype=torch.long))
-        return torch.stack(batch_prompt_tokens, dim=0), torch.stack(batch_output_tokens, dim=0)
+            tokens = prompt_tokens + output_tokens
+            batch_x_tokens.append(torch.tensor(tokens[:self.T], dtype=torch.long))
+            batch_y_tokens.append(torch.tensor(tokens[1:self.T + 1], dtype=torch.long))
+        return torch.stack(batch_x_tokens, dim=0), torch.stack(batch_y_tokens, dim=0)
     
     def complete_instruction(self, instruction:str, context=None):
         # TODO: 
@@ -95,9 +97,10 @@ class DialogSFTDataLoaderLite(BaseSFTDataLoaderLite):
         batch_y_tokens = []
         for dialog in data:
             # dialog: [{'role': 'system', 'content': 'xxx'}, {'role': 'user', 'content': 'xxx'}, {'role': 'assistant', 'content': 'xxx'}]
-            prompt_tokens = self.chat_format.encode_dialog_prompt(dialog[:-1], False)  # list
+            prompt_tokens = self.chat_format.encode_dialog_prompt(dialog[:-1])  # list
             output_tokens = self.tokenizer.encode(
-                dialog[-1]['content'], bos=True, eos=True, pad=True, max_len=self.T - len(prompt_tokens)
+                dialog[-1]['content'], bos=True, eos=True, pad=True, 
+                max_len=self.T - len(prompt_tokens)
             )
             tokens = prompt_tokens + output_tokens
             batch_x_tokens.append(torch.tensor(tokens[:self.T], dtype=torch.long))
