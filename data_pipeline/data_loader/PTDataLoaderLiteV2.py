@@ -26,9 +26,9 @@ class BasePTDataLoaderLiteV2(BaseDataLoaderLite):
         # advance the position in the tensor
         self.current_position += B * T * self.num_processes
         # if loading the next batch would be out of bounds, advance to next shard
-        if self.current_position + (B * T * self.num_processes + 1) > len(self.tokens):
+        if self.current_position + (B * self.num_processes) > len(self.data):
             self.current_shard = (self.current_shard + 1) % len(self.shards)
-            self.tokens = self.load_data(self.shards[self.current_shard])
+            self.data = self.load_data(self.shards[self.current_shard])
             self.current_position = B * T * self.process_rank
         return x, y
     
