@@ -1,4 +1,5 @@
 from data_pipeline.data_loader.PTDataLoaderLite import NpyPTDataLoaderLite, TxtPTDataLoaderLite
+from data_pipeline.data_loader.PTDataLoaderLiteV2 import NpyPTDataLoaderLiteV2, TxtPTDataLoaderLiteV2, JsonPTDataLoaderLiteV2
 from data_pipeline.data_loader.SFTDataLoaderLite import InstructionSFTDataLoaderLite, DialogSFTDataLoaderLite
 from data_pipeline.data_loader.DPODataLoaderLite import BaseDPODataLoaderLite
 
@@ -22,6 +23,9 @@ class DataLoaderLiteFactory:
     valid_classname_list = [
         'NpyPTDataLoaderLite',
         'TxtPTDataLoaderLite',
+        'NpyPTDataLoaderLiteV2',
+        'TxtPTDataLoaderLiteV2',
+        'JsonPTDataLoaderLiteV2',
         'InstructionSFTDataLoaderLite',
         'DialogSFTDataLoaderLite',
         'BaseDPODataLoaderLite'
