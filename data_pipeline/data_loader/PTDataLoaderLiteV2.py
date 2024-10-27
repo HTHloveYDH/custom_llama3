@@ -92,4 +92,3 @@ class JsonPTDataLoaderLiteV2(BasePTDataLoaderLiteV2):
         # data format: list = ['xxx', ...]
         data = [x['text'] for x in json_content['data']]
         return data
-
