@@ -17,6 +17,8 @@ class DataLoaderLiteFactory:
             False: {
                 'npy': NpyPTDataLoaderLite,
                 'txt': TxtPTDataLoaderLite,
+                'npy_v2': NpyPTDataLoaderLiteV2,
+                'txt_v2': TxtPTDataLoaderLiteV2,
                 'json': JsonPTDataLoaderLiteV2
             }
         }
