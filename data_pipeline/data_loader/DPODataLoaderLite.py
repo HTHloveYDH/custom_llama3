@@ -62,8 +62,8 @@ class BaseDPODataLoaderLite(BaseDataLoaderLite):
                 dpo_sample['loser_response'], bos=True, eos=True, pad=True, 
                 max_len=self.T - len(prompt_tokens)
             )  # list
-            winner_prompt_tokens = prompt_tokens + winner_prompt_tokens
-            loser_output_tokens = prompt_tokens + loser_output_tokens
+            winner_prompt_tokens = prompt_tokens + winner_prompt_tokens  # length: self.T
+            loser_output_tokens = prompt_tokens + loser_output_tokens  # length: self.T
             batch_winner_prompt_tokens.append(torch.tensor(winner_prompt_tokens, dtype=torch.long))
             batch_loser_output_tokens.append(torch.tensor(loser_output_tokens, dtype=torch.long))
         return torch.stack(batch_winner_prompt_tokens, dim=0), torch.stack(batch_loser_output_tokens, dim=0)
