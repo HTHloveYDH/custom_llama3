@@ -39,7 +39,10 @@ class DataLoaderLiteFactory:
 
     def create(self, align:bool, dialog:bool, data_format:str, **kwargs):
         assert dialog in [True, False]
-        assert data_format in ['npy', 'txt', 'instruction', 'dialog', 'naive']
+        assert data_format in [
+            'npy', 'txt', 'npy_v2', 'txt_v2', 'json_v2', 
+            'instruction', 'dialog', 'naive'
+        ]
         if align:
             classname = DataLoaderLiteFactory.classname_map[align][data_format]
             return classname(**kwargs)
