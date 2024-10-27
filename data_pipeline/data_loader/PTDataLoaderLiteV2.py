@@ -40,8 +40,8 @@ class BasePTDataLoaderLiteV2(BaseDataLoaderLite):
         batch_y_tokens = []
         for text in data:
             tokens = self.tokenizer.encode(text, bos=True, eos=True, pad=True, max_len=self.T + 1)
-            batch_x_tokens.append(torch.tensor(tokens[:-1], dtype=torch.long))
-            batch_y_tokens.append(torch.tensor(tokens[1:], dtype=torch.long))
+            batch_x_tokens.append(torch.tensor(tokens[:self.T], dtype=torch.long))
+            batch_y_tokens.append(torch.tensor(tokens[1:self.T + 1], dtype=torch.long))
         return torch.stack(batch_x_tokens, dim=0), torch.stack(batch_y_tokens, dim=0)
 
 class NpyPTDataLoaderLiteV2(BasePTDataLoaderLiteV2):
@@ -61,8 +61,8 @@ class NpyPTDataLoaderLiteV2(BasePTDataLoaderLiteV2):
         batch_x_tokens = []
         batch_y_tokens = []
         for tokens in data:
-            batch_x_tokens.append(torch.tensor(tokens[:-1], dtype=torch.long))
-            batch_y_tokens.append(torch.tensor(tokens[1:], dtype=torch.long))
+            batch_x_tokens.append(torch.tensor(tokens[:self.T], dtype=torch.long))
+            batch_y_tokens.append(torch.tensor(tokens[1:seld.T + 1], dtype=torch.long))
         return torch.stack(batch_x_tokens, dim=0), torch.stack(batch_y_tokens, dim=0)
 
 class TxtPTDataLoaderLiteV2(BasePTDataLoaderLiteV2):
