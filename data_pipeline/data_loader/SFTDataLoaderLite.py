@@ -95,9 +95,9 @@ class DialogSFTDataLoaderLite(BaseSFTDataLoaderLite):
         batch_y_tokens = []
         for dialog in data:
             # dialog: [{'role': 'system', 'content': 'xxx'}, {'role': 'user', 'content': 'xxx'}, {'role': 'assistant', 'content': 'xxx'}]
-            prompt_tokens = self.chat_format.encode_dialog_prompt(dialog[:-1], True, self.T)  # list
+            prompt_tokens = self.chat_format.encode_dialog_prompt(dialog[:-1], False)  # list
             output_tokens = self.tokenizer.encode(
-                dialog[-1]['content'], bos=True, eos=True, pad=True, max_len=self.T
+                dialog[-1]['content'], bos=True, eos=True, pad=True, max_len=self.T - len(prompt_tokens)
             )
             tokens = prompt_tokens + output_tokens
             batch_x_tokens.append(torch.tensor(tokens[:self.T], dtype=torch.long))
