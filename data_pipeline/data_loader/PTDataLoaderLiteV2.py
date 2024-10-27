@@ -61,8 +61,8 @@ class NpyPTDataLoaderLiteV2(BasePTDataLoaderLiteV2):
         batch_x_tokens = []
         batch_y_tokens = []
         for tokens in data:
-            batch_x_tokens.append(torch.tensor(tokens, dtype=torch.long))
-            batch_y_tokens.append(torch.tensor(tokens, dtype=torch.long))
+            batch_x_tokens.append(torch.tensor(tokens[:-1], dtype=torch.long))
+            batch_y_tokens.append(torch.tensor(tokens[1:], dtype=torch.long))
         return torch.stack(batch_x_tokens, dim=0), torch.stack(batch_y_tokens, dim=0)
 
 class TxtPTDataLoaderLiteV2(BasePTDataLoaderLiteV2):
