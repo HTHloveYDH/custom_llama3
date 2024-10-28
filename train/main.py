@@ -129,7 +129,7 @@ def main():
         # validate current weights on validation dataset shard of current process
         valid_on_epoch(
             modules if pp > 1 else model, val_data_loader, device, val_steps, 
-            epoch, parallel_args, master_process, lora, pp_schedule
+            epoch, parallel_args, master_process, pp_schedule, lora
         )
         # generate sentences to verify current weights in the master process
         if master_process and not tp > 1:

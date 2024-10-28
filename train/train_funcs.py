@@ -33,7 +33,7 @@ def pp_st_forward_pass(pp_schedule, x, y, z, parallel_args:ParallelArgs):
         pp_schedule.step(x)
     elif is_last_stage:
         losses = []
-        pp_schedule.step(target=y, losses=losses)
+        pp_schedule.step(target=torch.cat([y, z], dim=1), losses=losses)
     else:
         pp_schedule.step()
     # accumulate losses across pipeline microbatches
@@ -98,7 +98,7 @@ def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch
 @torch.no_grad()
 def st_valid_on_epoch(model, data_loader, device:str, val_steps:int, \
                       epoch:int, parallel_args:ParallelArgs, \
-                      master_process:bool, lora:bool, pp_schedule):
+                      master_process:bool, pp_schedule, lora:bool):
     # set to evaluation mode
     if isinstance(model, list):
         for module in model:
@@ -115,7 +115,7 @@ def st_valid_on_epoch(model, data_loader, device:str, val_steps:int, \
         x, y, z = x.to(device), y.to(device), z.to(device)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
             if parallel_args.pp > 1:
-                loss = pp_st_forward_pass(model, x, y, z, parallel_args)
+                loss = pp_st_forward_pass(pp_schedule, x, y, z, parallel_args)
             else:
                 loss = st_forward_pass(model, x, y, z, parallel_args)
         loss = loss / val_steps
@@ -200,7 +200,7 @@ def dpo_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoc
 @torch.no_grad()
 def dpo_valid_on_epoch(model, data_loader, device:str, val_steps:int, \
                        epoch:int, parallel_args:ParallelArgs, \
-                       master_process:bool, lora:bool, pp_schedule):
+                       master_process:bool, pp_schedule, lora:bool):
     # TODO: add pipeline parallel for DPO
     assert parallel_args.pp == 1
     model.eval()

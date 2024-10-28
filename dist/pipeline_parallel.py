@@ -194,9 +194,12 @@ def pipeline_llama_manual_split(
 
 # loss function to be shared by Pipeline Parallel and SPMD training
 def loss_fn(pred, labels):
-    return torch.nn.functional.cross_entropy(
-        pred.flatten(0, 1), labels.flatten(0, 1)
+    B, T = labels.shape
+    loss = torch.nn.functional.cross_entropy(
+        pred.flatten(0, 1), labels[:, :T // 2].flatten(0, 1), reduction='none'
     )
+    loss = (loss * labels[:, T // 2:].view(-1)).sum() / labels[:, T // 2:].sum()
+    return loss
 
 def _enable_pipeline_parallel(
         model:nn.Module,
