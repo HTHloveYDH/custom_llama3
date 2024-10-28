@@ -23,6 +23,7 @@ class BasePTDataLoaderLite(BaseDataLoaderLite):
         buffer = self.tokens[self.current_position:self.current_position + B * T + 1]
         x = (buffer[:-1]).view(B, T)  # inputs
         y = (buffer[1:]).view(B, T)  # targets
+        z = torch.ones(B, T, dtype=torch.float)  # loss_mask, float32
         # advance the position in the tensor
         self.current_position += B * T * self.num_processes
         # if loading the next batch would be out of bounds, advance to next shard
@@ -30,7 +31,7 @@ class BasePTDataLoaderLite(BaseDataLoaderLite):
             self.current_shard = (self.current_shard + 1) % len(self.shards)
             self.tokens = self.load_tokens(self.shards[self.current_shard])
             self.current_position = B * T * self.process_rank
-        return x, y
+        return x, y, z
     
     def load_tokens(self, filename:str):
         NotImplementedError(" Can not call 'load_tokens' via base class 'BasePTDataLoaderLite'! ")

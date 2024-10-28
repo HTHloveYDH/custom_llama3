@@ -22,7 +22,7 @@ class BasePTDataLoaderLiteV2(BaseDataLoaderLite):
     
     def next_batch(self):
         B, T = self.B, self.T
-        x, y = self.load_batch_tokens(self.data[self.current_position:self.current_position + B])  # get B samples for current GPU
+        x, y, z = self.load_batch_tokens(self.data[self.current_position:self.current_position + B])  # get B samples for current GPU
         # advance the position in the tensor
         self.current_position += B * T * self.num_processes
         # if loading the next batch would be out of bounds, advance to next shard
@@ -30,7 +30,7 @@ class BasePTDataLoaderLiteV2(BaseDataLoaderLite):
             self.current_shard = (self.current_shard + 1) % len(self.shards)
             self.data = self.load_data(self.shards[self.current_shard])
             self.current_position = B * T * self.process_rank
-        return x, y
+        return x, y, z
     
     def load_data(self, filename:str):
         raise NotImplementedError(" Can not call 'load_data' via base class 'BasePTDataLoaderLiteV2'! ")
@@ -38,11 +38,14 @@ class BasePTDataLoaderLiteV2(BaseDataLoaderLite):
     def load_batch_tokens(self, data:list):
         batch_x_tokens = []
         batch_y_tokens = []
+        batch_z_tokens = []
         for text in data:
             tokens = self.tokenizer.encode(text, bos=True, eos=True, pad=True, max_len=self.T + 1)
             batch_x_tokens.append(torch.tensor(tokens[:self.T], dtype=torch.long))
             batch_y_tokens.append(torch.tensor(tokens[1:self.T + 1], dtype=torch.long))
-        return torch.stack(batch_x_tokens, dim=0), torch.stack(batch_y_tokens, dim=0)
+            batch_z_tokens.append(torch.ones(self.T, dtype=torch.float))  # loss_mask, float32
+        return torch.stack(batch_x_tokens, dim=0), torch.stack(batch_y_tokens, dim=0), \
+            torch.stack(batch_z_tokens, dim=0)
 
 class NpyPTDataLoaderLiteV2(BasePTDataLoaderLiteV2):
     def __init__(self, B, T, process_rank:int, num_processes:int, tokenizer_path:str, data_root:str, \
@@ -60,10 +63,13 @@ class NpyPTDataLoaderLiteV2(BasePTDataLoaderLiteV2):
     def load_batch_tokens(self, data:list):
         batch_x_tokens = []
         batch_y_tokens = []
+        batch_z_tokens = []
         for tokens in data:
             batch_x_tokens.append(torch.tensor(tokens[:self.T], dtype=torch.long))
             batch_y_tokens.append(torch.tensor(tokens[1:self.T + 1], dtype=torch.long))
-        return torch.stack(batch_x_tokens, dim=0), torch.stack(batch_y_tokens, dim=0)
+            batch_z_tokens.append(torch.ones(self.T, dtype=torch.float))  # loss_mask, float32
+        return torch.stack(batch_x_tokens, dim=0), torch.stack(batch_y_tokens, dim=0), \
+            torch.stack(batch_z_tokens, dim=0)
 
 class TxtPTDataLoaderLiteV2(BasePTDataLoaderLiteV2):
     def __init__(self, B, T, process_rank:int, num_processes:int, tokenizer_path:str, data_root:str, \

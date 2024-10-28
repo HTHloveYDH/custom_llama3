@@ -11,12 +11,12 @@ from dist.ParallelArgs import ParallelArgs
 from utils.get_device_type import get_device_type
 
 
-def st_forward_pass(model, x, y, parallel_args:ParallelArgs):
+def st_forward_pass(model, x, y, z, parallel_args:ParallelArgs):
     logits = model(x)
     if parallel_args.dp > 1:
-        loss = model.module.compute_loss(logits, y, parallel_args.tp > 1, parallel_args.parallel_loss)
+        loss = model.module.compute_loss(logits, y, z, parallel_args.tp > 1, parallel_args.parallel_loss)
     else:
-        loss = model.compute_loss(logits, y, parallel_args.tp > 1, parallel_args.parallel_loss)
+        loss = model.compute_loss(logits, y, z, parallel_args.tp > 1, parallel_args.parallel_loss)
     return loss
 
 def st_backward_pass(loss, parallel_args:ParallelArgs):
@@ -63,15 +63,15 @@ def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch
         start_time = time.time()
         loss_accum = 0.0
         # x, y = data_loader.get_batch_data()  # only for demo
-        x, y = data_loader.next_batch()
-        x, y = x.to(device), y.to(device)
+        x, y, z = data_loader.next_batch()
+        x, y, z = x.to(device), y.to(device), z.to(device)
         if parallel:
             model.require_backward_grad_sync = ((step + 1) % grad_accum_steps == 0)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
             if parallel_args.pp > 1:
                 loss = pp_st_forward_pass(pp_schedule, x, y, parallel_args)
             else:
-                loss = st_forward_pass(model, x, y, parallel_args)
+                loss = st_forward_pass(model, x, y, z, parallel_args)
         loss_accum = loss.detach()
         # clip gradients
         _clip_grad_norm(model, max_norm=1.0)
@@ -111,13 +111,13 @@ def st_valid_on_epoch(model, data_loader, device:str, val_steps:int, \
     val_loss_accum = 0.0
     for _ in range(val_steps):
         # x, y = data_loader.get_batch_data()  # only for demo
-        x, y = data_loader.next_batch()
-        x, y = x.to(device), y.to(device)
+        x, y, z = data_loader.next_batch()
+        x, y, z = x.to(device), y.to(device), z.to(device)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
             if parallel_args.pp > 1:
                 loss = pp_st_forward_pass(model, x, y, parallel_args)
             else:
-                loss = st_forward_pass(model, x, y, parallel_args)
+                loss = st_forward_pass(model, x, y, z, parallel_args)
         loss = loss / val_steps
         val_loss_accum += loss.detach()
     if parallel and not parallel_args.parallel_loss:

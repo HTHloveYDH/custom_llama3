@@ -21,7 +21,7 @@ class BaseSFTDataLoaderLite(BaseDataLoaderLite):
     
     def next_batch(self):
         B, T = self.B, self.T
-        x, y = self.load_batch_tokens(self.data[self.current_position:self.current_position + B])  # get B samples for current GPU
+        x, y, z = self.load_batch_tokens(self.data[self.current_position:self.current_position + B])  # get B samples for current GPU
         # advance the position in the tensor
         self.current_position += B * self.num_processes
         # if loading the next batch would be out of bounds, advance to next shard
@@ -29,7 +29,7 @@ class BaseSFTDataLoaderLite(BaseDataLoaderLite):
             self.current_shard = (self.current_shard + 1) % len(self.shards)
             self.data = self.load_data(self.shards[self.current_shard])
             self.current_position = B * self.process_rank
-        return x, y
+        return x, y, z
     
     def load_data(self, filename:str):
         with open(filename, 'r') as f:
@@ -52,6 +52,7 @@ class InstructionSFTDataLoaderLite(BaseSFTDataLoaderLite):
     def load_batch_tokens(self, data:list):
         batch_x_tokens = []
         batch_y_tokens = []
+        batch_z_tokens = []
         for dialog in data:
             # dialog: {'instruction': 'xxx', 'input': 'xxx', 'output': 'xxx'}
             dialog = [
@@ -74,9 +75,12 @@ class InstructionSFTDataLoaderLite(BaseSFTDataLoaderLite):
                 max_len=self.T - len(prompt_tokens) + 1
             )
             tokens = prompt_tokens + output_tokens  # length: self.T + 1
+            loss_mask = [0.0] * len(prompt_tokens) + [1.0] * len(prompt_tokens)
             batch_x_tokens.append(torch.tensor(tokens[:-1], dtype=torch.long))
             batch_y_tokens.append(torch.tensor(tokens[1:], dtype=torch.long))
-        return torch.stack(batch_x_tokens, dim=0), torch.stack(batch_y_tokens, dim=0)
+            batch_z_tokens.append(torch.tensor(loss_mask, dtype=torch.float))  # loss_mask, float32
+        return torch.stack(batch_x_tokens, dim=0), torch.stack(batch_y_tokens, dim=0), \
+            torch.stack(batch_z_tokens, dim=0)
     
     def complete_instruction(self, instruction:str, context=None):
         # TODO: 
@@ -95,6 +99,7 @@ class DialogSFTDataLoaderLite(BaseSFTDataLoaderLite):
     def load_batch_tokens(self, data:list):
         batch_x_tokens = []
         batch_y_tokens = []
+        batch_z_tokens = []
         for dialog in data:
             # dialog: [{'role': 'system', 'content': 'xxx'}, {'role': 'user', 'content': 'xxx'}, {'role': 'assistant', 'content': 'xxx'}]
             prompt_tokens = self.chat_format.encode_dialog_prompt(dialog[:-1])  # list
@@ -103,6 +108,9 @@ class DialogSFTDataLoaderLite(BaseSFTDataLoaderLite):
                 max_len=self.T - len(prompt_tokens) + 1
             )
             tokens = prompt_tokens + output_tokens  # length: self.T + 1
+            loss_mask = [0.0] * len(prompt_tokens) + [1.0] * len(prompt_tokens)
             batch_x_tokens.append(torch.tensor(tokens[:-1], dtype=torch.long))
             batch_y_tokens.append(torch.tensor(tokens[1:], dtype=torch.long))
-        return torch.stack(batch_x_tokens, dim=0), torch.stack(batch_y_tokens, dim=0)
+            batch_z_tokens.append(torch.tensor(loss_mask, dtype=torch.float))  # loss_mask, float32
+        return torch.stack(batch_x_tokens, dim=0), torch.stack(batch_y_tokens, dim=0), \
+            torch.stack(batch_z_tokens, dim=0)

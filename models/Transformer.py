@@ -35,16 +35,25 @@ class Transformer(nn.Module):
         logits = self.output(h).float()
         return logits
 
-    def compute_loss(self, pred, target, tp:bool, parallel_loss:bool):
+    def compute_loss(self, pred, target, loss_mask, tp:bool, parallel_loss:bool):
         if target is not None:
             if tp:
                 if parallel_loss:
                     with loss_parallel():
-                        loss = F.cross_entropy(pred.view(-1, self.params.vocab_size), target.view(-1))
+                        loss = F.cross_entropy(
+                            pred.view(-1, self.params.vocab_size), target.view(-1), reduction='none'
+                        )
+                        loss = (loss * loss_mask.view(-1)).sum() / loss_mask.sum()
                 else:
-                    loss = F.cross_entropy(pred.view(-1, pred.size(-1)), target.view(-1))
+                    loss = F.cross_entropy(
+                        pred.view(-1, pred.size(-1)), target.view(-1), reduction='none'
+                    )
+                    loss = (loss * loss_mask.view(-1)).sum() / loss_mask.sum()
             else:
-                loss = F.cross_entropy(pred.view(-1, self.params.vocab_size), target.view(-1))
+                loss = F.cross_entropy(
+                    pred.view(-1, self.params.vocab_size), target.view(-1), reduction='none'
+                )
+                loss = (loss * loss_mask.view(-1)).sum() / loss_mask.sum()
         return loss
 
     def precompute_freqs_cis(self, mode:bool):
