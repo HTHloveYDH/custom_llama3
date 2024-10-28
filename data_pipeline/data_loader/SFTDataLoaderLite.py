@@ -75,7 +75,7 @@ class InstructionSFTDataLoaderLite(BaseSFTDataLoaderLite):
                 max_len=self.T - len(prompt_tokens) + 1
             )
             tokens = prompt_tokens + output_tokens  # length: self.T + 1
-            loss_mask = [0.0] * len(prompt_tokens) + [1.0] * (self.T - len(prompt_tokens))
+            loss_mask = [0.0] * (len(prompt_tokens) - 1) + [1.0] * (self.T - len(prompt_tokens) + 1)
             batch_x_tokens.append(torch.tensor(tokens[:-1], dtype=torch.long))
             batch_y_tokens.append(torch.tensor(tokens[1:], dtype=torch.long))
             batch_z_tokens.append(torch.tensor(loss_mask, dtype=torch.float))  # loss_mask, float32
