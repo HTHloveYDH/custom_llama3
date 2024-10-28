@@ -334,6 +334,10 @@ The package (torch.distributed) needs to be initialized using the torch.distribu
 
 https://pytorch.org/docs/stable/distributed.tensor.parallel.html
 
+### Pytorch: Pipeline Parallelism
+
+https://pytorch.org/docs/stable/distributed.pipelining.html
+
 ### huggingface safetensors to llama.cpp gguf format
 
 https://huggingface.co/docs/transformers/main/en/gguf
@@ -356,3 +360,5 @@ https://github.com/hkproj/pytorch-lora
 https://github.com/pytorch/torchtitan/tree/main
 
 https://huggingface.co/docs/transformers/main/en/gguf
+
+https://pytorch.org/docs/stable/distributed.pipelining.html
