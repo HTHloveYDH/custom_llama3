@@ -337,6 +337,7 @@ https://pytorch.org/docs/stable/distributed.tensor.parallel.html
 ### Pytorch: Pipeline Parallelism
 
 https://pytorch.org/docs/stable/distributed.pipelining.html
+https://pytorch.org/tutorials/intermediate/pipelining_tutorial.html
 
 ### huggingface safetensors to llama.cpp gguf format
 
@@ -362,3 +363,4 @@ https://github.com/pytorch/torchtitan/tree/main
 https://huggingface.co/docs/transformers/main/en/gguf
 
 https://pytorch.org/docs/stable/distributed.pipelining.html
+https://pytorch.org/tutorials/intermediate/pipelining_tutorial.html
