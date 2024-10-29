@@ -4,12 +4,15 @@ import json
 import torch
 from torch.nn import functional as F
 
+from models.DPOLlama import DPOLlama
 from gen.rag import query_database
 from utils.get_device_type import get_device_type
 
 
 def generate_tokens(model, tokens:list, gen_batch_size:int, gen_len:int, device:str, \
                     dp_global_rank:int):
+    if isinstance(model, DPOLlama):
+        model = model.llm
     assert isinstance(tokens, list)
     device_type = get_device_type(device)
     tokens = torch.tensor(tokens, dtype=torch.long)  # shape: (len(prompt))
