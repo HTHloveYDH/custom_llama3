@@ -225,11 +225,11 @@ def dpo_valid_on_epoch(model, data_loader, device:str, val_steps:int, \
         save_curr_model_path = os.path.join(log_dir, f'model_epoch_{epoch}.pt')
         checkpoint_path = os.path.join('.', 'ckpt', f'model.pt')
         if parallel_args.dp > 1:
-            _save_ckpt(model.module, epoch, val_loss_accum.item(), save_curr_model_path, lora)
-            _save_ckpt(model.module, epoch, val_loss_accum.item(), checkpoint_path, lora)
+            _save_ckpt(model.module.llm, epoch, val_loss_accum.item(), save_curr_model_path, lora)
+            _save_ckpt(model.module.llm, epoch, val_loss_accum.item(), checkpoint_path, lora)
         else:
-            _save_ckpt(model, epoch, val_loss_accum.item(), save_curr_model_path, lora)
-            _save_ckpt(model, epoch, val_loss_accum.item(), checkpoint_path, lora)
+            _save_ckpt(model.llm, epoch, val_loss_accum.item(), save_curr_model_path, lora)
+            _save_ckpt(model.llm, epoch, val_loss_accum.item(), checkpoint_path, lora)
 
 def _save_full_ckpt(model, epoch:int, val_loss_accum:float, checkpoint_path:str):
     checkpoint = {
