@@ -31,6 +31,8 @@ def get_model(llama_config:dict, device:str, training:bool, **kwargs):
     if training:
         if llama_config['align']:
             model = DPOLlama(model)
+            # TODO:
+            model.to(device)
         optimizer = _get_optimizer(model, **kwargs)
     return model, optimizer
 
