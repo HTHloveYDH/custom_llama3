@@ -88,7 +88,7 @@ class TxtPTDataLoaderLiteV2(BasePTDataLoaderLiteV2):
 class JsonPTDataLoaderLiteV2(BasePTDataLoaderLiteV2):
     def __init__(self, B, T, process_rank:int, num_processes:int, tokenizer_path:str, data_root:str, \
                  master_process:bool, split:str):
-        super(TxtPTDataLoaderLiteV2, self).__init__(
+        super(JsonPTDataLoaderLiteV2, self).__init__(
             B, T, process_rank, num_processes, tokenizer_path, data_root, master_process, split
         )
 
