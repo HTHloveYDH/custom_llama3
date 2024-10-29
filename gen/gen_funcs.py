@@ -50,7 +50,7 @@ def generate(model, tokenizer, chat_format, prompt, device:str, gen_batch_size:i
     model.eval()
     # preprocess for input prompt: python <class 'list'>
     if dialog:
-        assert isinstance(prompt, list)  # example: [{'role': 'system', 'content': 'xxx.',}, {'role': 'user', 'content': 'xxx.',}]
+        assert isinstance(prompt, list)  # example: [{'role': 'system', 'content': 'xxx.'}, {'role': 'user', 'content': 'xxx.'}]
         tokens = chat_format.encode_dialog_prompt(prompt)  # python <class 'list'>
     else:
         assert isinstance(prompt, str)  # 'Hello, I am a student.'
