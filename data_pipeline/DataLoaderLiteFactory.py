@@ -11,7 +11,7 @@ class DataLoaderLiteFactory:
         },
         False: {
             True: {
-                'stf_instruction': InstructionSFTDataLoaderLite,
+                'sft_instruction': InstructionSFTDataLoaderLite,
                 'sft_dialog': DialogSFTDataLoaderLite
             },
             False: {
@@ -40,7 +40,7 @@ class DataLoaderLiteFactory:
     def create(self, align:bool, dialog:bool, data_format:str, **kwargs):
         assert dialog in [True, False]
         assert data_format in [
-            'pt_npy', 'pt_txt', 'pt_npy_v2', 'pt_txt_v2', 'pt_json_v2', 'stf_instruction', 
+            'pt_npy', 'pt_txt', 'pt_npy_v2', 'pt_txt_v2', 'pt_json_v2', 'sft_instruction', 
             'sft_dialog', 'dpo_base'
         ]
         if align:
