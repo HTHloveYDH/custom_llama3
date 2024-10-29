@@ -10,10 +10,8 @@ class DPOLlama(nn.Module):
         self.value_head = nn.Linear(llm.params.vocab_size, 1)
 
     def forward(self, x, start_pos=0):
-        logits, _ = self.llm(x, start_pos)  # return logits, loss == None
+        logits = self.llm(x, start_pos)  # return logits, loss == None
         values = self.value_head(logits).squeeze(-1)
-        if not self.training:
-            return logits
         return values, logits
     
     def dpo_loss(self, values_winner, values_loser, tp:bool, beta=0.1):
