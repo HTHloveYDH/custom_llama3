@@ -216,15 +216,15 @@ class ChatFormat:
     def encode_header(self, message: Message) -> List[int]:
         tokens = []
         tokens.append(self.tokenizer.special_tokens["<|start_header_id|>"])
-        tokens.extend(self.tokenizer.encode(message["role"], bos=False, eos=False))
+        tokens.extend(self.tokenizer.encode(message["role"], bos=False, eos=False)[0])
         tokens.append(self.tokenizer.special_tokens["<|end_header_id|>"])
-        tokens.extend(self.tokenizer.encode("\n\n", bos=False, eos=False))
+        tokens.extend(self.tokenizer.encode("\n\n", bos=False, eos=False)[0])
         return tokens
 
     def encode_message(self, message: Message) -> List[int]:
         tokens = self.encode_header(message)
         tokens.extend(
-            self.tokenizer.encode(message["content"].strip(), bos=False, eos=False)
+            self.tokenizer.encode(message["content"].strip(), bos=False, eos=False)[0]
         )
         tokens.append(self.tokenizer.special_tokens["<|eot_id|>"])
         return tokens
