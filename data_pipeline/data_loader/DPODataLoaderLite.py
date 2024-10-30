@@ -54,11 +54,11 @@ class BaseDPODataLoaderLite(BaseDataLoaderLite):
                 }
             ]
             prompt_tokens = self.chat_format.encode_dialog_prompt(dialog)  # list
-            winner_prompt_tokens = self.tokenizer.encode(
+            winner_prompt_tokens, _ = self.tokenizer.encode(
                 dpo_sample['winner_response'], bos=True, eos=True, pad=True, 
                 max_len=self.T - len(prompt_tokens)
             )  # list
-            loser_output_tokens = self.tokenizer.encode(
+            loser_output_tokens, _ = self.tokenizer.encode(
                 dpo_sample['loser_response'], bos=True, eos=True, pad=True, 
                 max_len=self.T - len(prompt_tokens)
             )  # list
