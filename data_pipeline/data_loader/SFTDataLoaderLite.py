@@ -70,12 +70,12 @@ class InstructionSFTDataLoaderLite(BaseSFTDataLoaderLite):
                 }
             ]
             prompt_tokens = self.chat_format.encode_dialog_prompt(dialog[:-1])  # list
-            output_tokens = self.tokenizer.encode(
+            output_tokens, pad_len = self.tokenizer.encode(
                 dialog[-1]['content'], bos=True, eos=True, pad=True, 
                 max_len=self.T - len(prompt_tokens) + 1
             )
             tokens = prompt_tokens + output_tokens  # length: self.T + 1
-            loss_mask = [0.0] * (len(prompt_tokens) - 1) + [1.0] * (self.T - len(prompt_tokens) + 1)
+            loss_mask = [0.0] * (len(prompt_tokens) - 1) + [1.0] * (self.T - len(prompt_tokens) - pad_len + 1) + [0.0] * pad_len
             batch_x_tokens.append(torch.tensor(tokens[:-1], dtype=torch.long))
             batch_y_tokens.append(torch.tensor(tokens[1:], dtype=torch.long))
             batch_z_tokens.append(torch.tensor(loss_mask, dtype=torch.float))  # loss_mask, float32
@@ -103,12 +103,12 @@ class DialogSFTDataLoaderLite(BaseSFTDataLoaderLite):
         for dialog in data:
             # dialog: [{'role': 'system', 'content': 'xxx'}, {'role': 'user', 'content': 'xxx'}, {'role': 'assistant', 'content': 'xxx'}]
             prompt_tokens = self.chat_format.encode_dialog_prompt(dialog[:-1])  # list
-            output_tokens = self.tokenizer.encode(
+            output_tokens, pad_len = self.tokenizer.encode(
                 dialog[-1]['content'], bos=True, eos=True, pad=True, 
                 max_len=self.T - len(prompt_tokens) + 1
             )
             tokens = prompt_tokens + output_tokens  # length: self.T + 1
-            loss_mask = [0.0] * (len(prompt_tokens) - 1) + [1.0] * (self.T - len(prompt_tokens) + 1)
+            loss_mask = [0.0] * (len(prompt_tokens) - 1) + [1.0] * (self.T - len(prompt_tokens) - pad_len + 1) + [0.0] * pad_len
             batch_x_tokens.append(torch.tensor(tokens[:-1], dtype=torch.long))
             batch_y_tokens.append(torch.tensor(tokens[1:], dtype=torch.long))
             batch_z_tokens.append(torch.tensor(loss_mask, dtype=torch.float))  # loss_mask, float32
