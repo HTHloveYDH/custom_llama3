@@ -75,6 +75,8 @@ class InstructionSFTDataLoaderLite(BaseSFTDataLoaderLite):
                 max_len=self.T - len(prompt_tokens) + 1
             )
             tokens = prompt_tokens + output_tokens  # length: self.T + 1
+            # loss_mask = torch.zeros(self.T, dtype=torch.float)
+            # loss_mask[len(prompt_tokens) - 1:-pad_len] = 1.0
             loss_mask = [0.0] * (len(prompt_tokens) - 1) + [1.0] * (self.T - len(prompt_tokens) - pad_len + 1) + [0.0] * pad_len
             batch_x_tokens.append(torch.tensor(tokens[:-1], dtype=torch.long))
             batch_y_tokens.append(torch.tensor(tokens[1:], dtype=torch.long))
@@ -108,6 +110,8 @@ class DialogSFTDataLoaderLite(BaseSFTDataLoaderLite):
                 max_len=self.T - len(prompt_tokens) + 1
             )
             tokens = prompt_tokens + output_tokens  # length: self.T + 1
+            # loss_mask = torch.zeros(self.T, dtype=torch.float)
+            # loss_mask[len(prompt_tokens) - 1:-pad_len] = 1.0
             loss_mask = [0.0] * (len(prompt_tokens) - 1) + [1.0] * (self.T - len(prompt_tokens) - pad_len + 1) + [0.0] * pad_len
             batch_x_tokens.append(torch.tensor(tokens[:-1], dtype=torch.long))
             batch_y_tokens.append(torch.tensor(tokens[1:], dtype=torch.long))
