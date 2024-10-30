@@ -140,7 +140,7 @@ def TransformerTEST(arg_map):
 # def DemoDataLoaderTEST(arg_map):
 #     data_loader = DemoDataLoader('./data/demo/txt', arg_map.max_seq_len, arg_map.max_batch_size, 'full')
 #     prompts = "Hello World"
-#     encoded_tokens = data_loader.encode(prompts)
+#     encoded_tokens, _ = data_loader.encode(prompts)
 #     decoded_text = data_loader.decode(encoded_tokens)
 #     print(f"Shakespeare text length: {data_loader.vocab_size}")
 #     print(f"vocabulary content: {''.join(data_loader.vocab)}\n")
@@ -153,7 +153,7 @@ def TokenizerTEST():
     tokenizer_dir = os.path.join('.', 'tokenizer', 'llama3')
     for tokenizer_file in os.listdir(tokenizer_dir):
         tokenizer = Tokenizer(os.path.join(tokenizer_dir, tokenizer_file))
-        tokens = tokenizer.encode("This is a test sentence.", bos=True, eos=True)
+        tokens, _ = tokenizer.encode("This is a test sentence.", bos=True, eos=True)
         print(f"encode result: {tokens}")
         text = tokenizer.decode([128000, 2028, 374, 264, 1296, 11914, 13, 128001])
         print(f"decode result: {text}")
