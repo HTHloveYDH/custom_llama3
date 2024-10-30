@@ -160,10 +160,14 @@ class Tokenizer:
             t.insert(0, self.bos_id)
         if eos:
             t.append(self.eos_id)
+        pad_len = 0
         if pad:
-            assert len(t) <= max_len
-            t.extend([self.pad_id] * (max_len - len(t)))
-        return t
+            if len(t) <= max_len:
+                pad_len = max_len - len(t)
+                t.extend([self.pad_id] * pad_len)
+            else:
+                t = t[:max_len]
+        return t, pad_len
 
     def decode(self, t: Sequence[int]) -> str:
         """
