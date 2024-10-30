@@ -43,6 +43,8 @@ class BasePTDataLoaderLiteV2(BaseDataLoaderLite):
             tokens, pad_len = self.tokenizer.encode(text, bos=True, eos=True, pad=True, max_len=self.T + 1)
             batch_x_tokens.append(torch.tensor(tokens[:-1], dtype=torch.long))
             batch_y_tokens.append(torch.tensor(tokens[1:], dtype=torch.long))
+            # loss_mask = torch.ones(loss_mask, dtype=torch.float)
+            # loss_mask[-pad_len:] = 0.0
             loss_mask = [1.0] * (self.T - pad_len) + [0.0] * pad_len
             batch_z_tokens.append(torch.tensor(loss_mask, dtype=torch.float))  # loss_mask, float32
         return torch.stack(batch_x_tokens, dim=0), torch.stack(batch_y_tokens, dim=0), \
