@@ -59,6 +59,6 @@ class TxtPTDataLoaderLite(BasePTDataLoaderLite):
     def load_tokens(self, filename:str):
         with open(filename, 'r') as f:
             text = f.read()
-        tokens = self.tokenizer.encode(text, bos=True, eos=True)
+        tokens, _ = self.tokenizer.encode(text, bos=True, eos=True)
         tensor_tokens = torch.tensor(tokens, dtype=torch.long)
         return tensor_tokens
