@@ -54,7 +54,7 @@ def generate(model, tokenizer, chat_format, prompt, device:str, gen_batch_size:i
         tokens = chat_format.encode_dialog_prompt(prompt)  # python <class 'list'>
     else:
         assert isinstance(prompt, str)  # 'Hello, I am a student.'
-        tokens = tokenizer.encode(prompt, bos=True, eos=True)  # python <class 'list'>
+        tokens, _ = tokenizer.encode(prompt, bos=True, eos=True)  # python <class 'list'>
     start_gen_pos = len(tokens)
     xgen = generate_tokens(model, tokens, gen_batch_size, gen_len, device, dp_global_rank)
     return_messages = []
