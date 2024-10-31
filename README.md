@@ -7,7 +7,7 @@
 ### simple launch on one node:
 
 ```bash
-python train/main.py
+python train/main.py  # export CUDA_VISIBLE_DEVICES=0,1  # only use GPU 0 and GPU 1
 ```
 
 ### DDP (FSDP) launch on one node by torchrun (e.g. 8 GPUs):
