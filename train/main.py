@@ -83,9 +83,10 @@ def main():
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
     if data_format in ['pt_txt', 'pt_npy']:
-        assert total_token_num % (max_batch_size * max_seq_len * dp) == 0, 'make sure total_token_num is divisible by B * T * dp'
+        # assert total_data_num % (max_batch_size * max_seq_len * dp) == 0, 'make sure total_data_num is divisible by B * T * dp'
         steps_per_epoch = total_data_num // (max_batch_size * max_seq_len * dp)
     else:
+        # assert total_data_num % (max_batch_size * dp) == 0, 'make sure total_data_num is divisible by B * dp'
         steps_per_epoch = total_data_num // (max_batch_size * dp)
     assert steps_per_epoch % grad_accum_steps == 0, 'make sure steps_per_epoch is divisible by grad_accum_steps'
     if master_process:
