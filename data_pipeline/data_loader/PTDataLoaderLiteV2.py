@@ -24,12 +24,12 @@ class BasePTDataLoaderLiteV2(BaseDataLoaderLite):
         B, T = self.B, self.T
         x, y, z = self.load_batch_tokens(self.data[self.current_position:self.current_position + B])  # get B samples for current GPU
         # advance the position in the tensor
-        self.current_position += B * T * self.num_processes
+        self.current_position += B * self.num_processes
         # if loading the next batch would be out of bounds, advance to next shard
         if self.current_position + (B * self.num_processes) > len(self.data):
             self.current_shard = (self.current_shard + 1) % len(self.shards)
             self.data = self.load_data(self.shards[self.current_shard])
-            self.current_position = B * T * self.process_rank
+            self.current_position = B * self.process_rank
         return x, y, z
     
     def load_data(self, filename:str):
