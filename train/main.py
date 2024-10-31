@@ -74,7 +74,7 @@ def main():
     # data configs
     data_root = data_config['data_root']
     data_format = data_config['data_format']
-    total_token_num = data_config['total_token_num']
+    total_data_num = data_config['total_data_num']
     # set up DP (distributed data parallel or fully sharded data parallel) process group.
     # torchrun command sets the env variables RANK, LOCAL_RANK, and WORLD_SIZE
     master_process, device, device_mesh, parallel_args = init_dist(dist)
@@ -82,8 +82,11 @@ def main():
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
-    assert total_token_num % (max_batch_size * max_seq_len * dp) == 0, 'make sure total_token_num is divisible by B * T * dp'
-    steps_per_epoch = total_token_num // (max_batch_size * max_seq_len * dp)
+    if data_format in ['pt_txt', 'pt_npy']:
+        assert total_token_num % (max_batch_size * max_seq_len * dp) == 0, 'make sure total_token_num is divisible by B * T * dp'
+        steps_per_epoch = total_data_num // (max_batch_size * max_seq_len * dp)
+    else:
+        steps_per_epoch = total_data_num // (max_batch_size * dp)
     assert steps_per_epoch % grad_accum_steps == 0, 'make sure steps_per_epoch is divisible by grad_accum_steps'
     if master_process:
         print(f'total desired batch size: {total_token_num}')
