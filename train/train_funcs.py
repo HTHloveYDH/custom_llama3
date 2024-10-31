@@ -8,6 +8,7 @@ import torch.distributed as dist
 from torch.distributed.tensor.parallel import loss_parallel
 
 from dist.ParallelArgs import ParallelArgs
+from models.DPOLlama import DPOLlama
 from utils.get_device_type import get_device_type
 
 
@@ -266,7 +267,10 @@ def resume_from_ckpt(model, ckpt_dir:str):
     if os.path.exists(checkpoint_path):
         print('Loading checkpoint directory')
         checkpoint = torch.load(checkpoint_path)
-        model.load_state_dict(checkpoint['model'])
+        if isinstance(model, DPOLlama):
+            model.llm.load_state_dict(checkpoint['model'])
+        else:
+            model.load_state_dict(checkpoint['model'])
     return model
 
 def _clip_grad_norm(model, max_norm:float=1.0):
