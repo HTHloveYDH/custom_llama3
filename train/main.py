@@ -82,6 +82,7 @@ def main():
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
+    # compute steps per epoch
     if data_format in ['pt_txt', 'pt_npy']:
         # assert total_data_num % (max_batch_size * max_seq_len * dp) == 0, 'make sure total_data_num is divisible by B * T * dp'
         steps_per_epoch = total_data_num // (max_batch_size * max_seq_len * dp)
