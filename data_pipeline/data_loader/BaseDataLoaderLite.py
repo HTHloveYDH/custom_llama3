@@ -13,7 +13,7 @@ class BaseDataLoaderLite:
         self.tokenizer = Tokenizer(tokenizer_path)
         self.chat_format = ChatFormat(self.tokenizer)
         # get filenames
-        assert split in {'train', 'val'}
+        assert split in {'train', 'val', 'test'}
         files = os.listdir(data_root)  # all data files on current node
         split_files = [file for file in files if split in file]
         split_files = sorted(split_files)
