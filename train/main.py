@@ -91,7 +91,7 @@ def main():
         steps_per_epoch = total_data_num // (max_batch_size * dp)
     assert steps_per_epoch % grad_accum_steps == 0, 'make sure steps_per_epoch is divisible by grad_accum_steps'
     if master_process:
-        print(f'total desired batch size: {total_data_num}')
+        print(f'total desired batch size: {max_batch_size * dp}')
         print(f'=> calculated gradient accumulation steps: {grad_accum_steps}')
     torch.set_float32_matmul_precision('high')
 
