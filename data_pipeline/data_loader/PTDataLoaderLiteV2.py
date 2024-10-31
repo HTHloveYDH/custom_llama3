@@ -18,7 +18,7 @@ class BasePTDataLoaderLiteV2(BaseDataLoaderLite):
         # state, init at shard zero
         self.current_shard = 0
         self.data = self.load_data(self.shards[self.current_shard])
-        self.current_position = self.B * self.T * self.process_rank
+        self.current_position = self.B * self.process_rank
     
     def next_batch(self):
         B, T = self.B, self.T
