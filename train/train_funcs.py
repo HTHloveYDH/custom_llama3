@@ -6,8 +6,10 @@ import torch
 import torch.nn as nn
 import torch.distributed as dist
 from torch.distributed.tensor.parallel import loss_parallel
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP, FullStateDictConfig, StateDictType
 
 from dist.ParallelArgs import ParallelArgs
+from models.ModelArgs import ModelArgs
 from models.DPOLlama import DPOLlama
 from utils.get_device_type import get_device_type
 
@@ -128,14 +130,10 @@ def st_valid_on_epoch(model, data_loader, device:str, val_steps:int, \
         print(f'validation loss: {val_loss_accum.item():.4f}')
         # optionally write model checkpoints
         log_dir = os.path.join('.', 'log', 'ckpt')
-        save_curr_model_path = os.path.join(log_dir, f'model_epoch_{epoch}.pt')
-        checkpoint_path = os.path.join('.', 'ckpt', f'model.pt')
-        if parallel_args.dp > 1:
-            _save_ckpt(model.module, epoch, val_loss_accum.item(), save_curr_model_path, lora)
-            _save_ckpt(model.module, epoch, val_loss_accum.item(), checkpoint_path, lora)
-        else:
-            _save_ckpt(model, epoch, val_loss_accum.item(), save_curr_model_path, lora)
-            _save_ckpt(model, epoch, val_loss_accum.item(), checkpoint_path, lora)
+        save_curr_model_path = os.path.join(log_dir, f"{'lora' if lora else 'model'}_epoch_{epoch}.pt")
+        checkpoint_path = os.path.join('.', 'ckpt', f"{'lora' if lora else 'model'}.pt")
+        _save_ckpt(model, parallel_args, epoch, val_loss_accum.item(), save_curr_model_path, lora)
+        _save_ckpt(model, parallel_args, epoch, val_loss_accum.item(), checkpoint_path, lora)
 
 def dpo_forward_pass(model, x_winner, x_loser, parallel_args:ParallelArgs):
     winner_values, winner_logits = model(x_winner)
@@ -223,44 +221,53 @@ def dpo_valid_on_epoch(model, data_loader, device:str, val_steps:int, \
         print(f'validation loss: {val_loss_accum.item():.4f}')
         # optionally write model checkpoints
         log_dir = os.path.join('.', 'log', 'ckpt')
-        save_curr_model_path = os.path.join(log_dir, f'model_epoch_{epoch}.pt')
-        checkpoint_path = os.path.join('.', 'ckpt', f'model.pt')
-        if parallel_args.dp > 1:
-            _save_ckpt(model.module.llm, epoch, val_loss_accum.item(), save_curr_model_path, lora)
-            _save_ckpt(model.module.llm, epoch, val_loss_accum.item(), checkpoint_path, lora)
-        else:
-            _save_ckpt(model.llm, epoch, val_loss_accum.item(), save_curr_model_path, lora)
-            _save_ckpt(model.llm, epoch, val_loss_accum.item(), checkpoint_path, lora)
+        save_curr_model_path = os.path.join(log_dir, f"{'lora' if lora else 'model'}_epoch_{epoch}.pt")
+        checkpoint_path = os.path.join('.', 'ckpt', f"{'lora' if lora else 'model'}.pt")
+        _save_ckpt(model, parallel_args, epoch, val_loss_accum.item(), save_curr_model_path, lora)
+        _save_ckpt(model, parallel_args, epoch, val_loss_accum.item(), checkpoint_path, lora)
 
-def _save_full_ckpt(model, epoch:int, val_loss_accum:float, checkpoint_path:str):
+def _save_full_ckpt(model_state_dict:OrderedDict, params:ModelArgs, epoch:int, \
+                    val_loss_accum:float, checkpoint_path:str):
     checkpoint = {
-        'model': model.state_dict(),
+        'model': model_state_dict,
         'epoch': epoch,
-        'params': model.params,
+        'params': params,
         'val_loss': val_loss_accum
     }
     # you might also want to add optimizer.state_dict() and
     # rng seeds etc., if you wanted to more exactly resume training
     torch.save(checkpoint, checkpoint_path)
 
-def _save_lora_ckpt(model, epoch:int, val_loss_accum:float, checkpoint_path:str):
+def _save_lora_ckpt(model_state_dict:OrderedDict, params:ModelArgs, epoch:int, \
+                    val_loss_accum:float, checkpoint_path:str):
     checkpoint = {
         'model': OrderedDict(),
         'epoch': epoch,
-        'params': model.params,
+        'params': params,
         'val_loss': val_loss_accum
     }
-    model_state_dict = model.state_dict()
     for key in model_state_dict.keys():
         if 'lora' in key:
             checkpoint['model'].update({key: model_state_dict[key]})
-    torch.save(checkpoint, './lora.pt')
+    torch.save(checkpoint, checkpoint_path)
 
-def _save_ckpt(model, epoch:int, val_loss_accum:float, checkpoint_path:str, lora:bool):
-    if lora:
-        _save_lora_ckpt(model, epoch, val_loss_accum, checkpoint_path)
+def _save_ckpt(model, parallel_args:ParallelArgs, epoch:int, val_loss_accum:float, \
+               checkpoint_path:str, lora:bool):
+    if parallel_args.dp > 1:
+        if parallel_args.dp_shard:
+            save_policy = FullStateDictConfig(offload_to_cpu=True, rank0_only=True)
+            with FSDP.state_dict_type(model, StateDictType.FULL_STATE_DICT, save_policy):
+                state_dict = model.state_dict()
+        else:
+            llm = model.module.llm if hasattr(model.module, 'llm') else model.module
+            state_dict = llm.state_dict()
     else:
-        _save_full_ckpt(model, epoch, val_loss_accum, checkpoint_path)
+        llm = model.llm if hasattr(model, 'llm') else model
+        state_dict = llm.state_dict()
+    if lora:
+        _save_lora_ckpt(state_dict, llm.params, epoch, val_loss_accum, checkpoint_path)
+    else:
+        _save_full_ckpt(state_dict, llm.params, epoch, val_loss_accum, checkpoint_path)
 
 def resume_from_ckpt(model, ckpt_dir:str):
     checkpoint_path = os.path.join(ckpt_dir, 'model.pt')
