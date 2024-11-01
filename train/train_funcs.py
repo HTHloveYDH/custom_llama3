@@ -254,10 +254,12 @@ def _save_lora_ckpt(model_state_dict:OrderedDict, params:ModelArgs, epoch:int, \
 def _save_ckpt(model, parallel_args:ParallelArgs, epoch:int, val_loss_accum:float, \
                checkpoint_path:str, lora:bool):
     if parallel_args.dp > 1:
+        # FSDP
         if parallel_args.dp_shard:
             save_policy = FullStateDictConfig(offload_to_cpu=True, rank0_only=True)
             with FSDP.state_dict_type(model, StateDictType.FULL_STATE_DICT, save_policy):
                 state_dict = model.state_dict()
+        # DDP
         else:
             llm = model.module.llm if hasattr(model.module, 'llm') else model.module
             state_dict = llm.state_dict()
