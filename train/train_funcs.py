@@ -258,18 +258,18 @@ def _save_ckpt(model, parallel_args:ParallelArgs, epoch:int, val_loss_accum:floa
         if parallel_args.dp_shard:
             save_policy = FullStateDictConfig(offload_to_cpu=True, rank0_only=True)
             with FSDP.state_dict_type(model, StateDictType.FULL_STATE_DICT, save_policy):
-                state_dict = model.state_dict()
+                state_dict, params = model.state_dict(), model.params
         # DDP
         else:
             llm = model.module.llm if hasattr(model.module, 'llm') else model.module
-            state_dict = llm.state_dict()
+            state_dict, params = llm.state_dict(), llm.params
     else:
         llm = model.llm if hasattr(model, 'llm') else model
-        state_dict = llm.state_dict()
+        state_dict, params = llm.state_dict(), llm.params
     if lora:
-        _save_lora_ckpt(state_dict, llm.params, epoch, val_loss_accum, checkpoint_path)
+        _save_lora_ckpt(state_dict, params, epoch, val_loss_accum, checkpoint_path)
     else:
-        _save_full_ckpt(state_dict, llm.params, epoch, val_loss_accum, checkpoint_path)
+        _save_full_ckpt(state_dict, params, epoch, val_loss_accum, checkpoint_path)
 
 def resume_from_ckpt(model, ckpt_dir:str):
     checkpoint_path = os.path.join(ckpt_dir, 'model.pt')
