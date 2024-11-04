@@ -50,9 +50,9 @@ def pp_st_forward_pass(pp_schedule, x, y, z, parallel_args:ParallelArgs):
 def pp_st_backward_pass(loss, parallel_args:ParallelArgs):
     pass
 
-def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch:int, \
-                      grad_accum_steps:int, epoch:int, log_interval:int, \
-                      parallel_args:ParallelArgs, master_process:bool, pp_schedule):
+def st_train_on_epoch(model, pp_schedule, data_loader, optimizer, device:str, \
+                      steps_per_epoch:int, grad_accum_steps:int, epoch:int, log_interval:int, \
+                      parallel_args:ParallelArgs, master_process:bool):
     # set to training mode
     if isinstance(model, list):
         for module in model:
@@ -99,9 +99,8 @@ def st_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch
             print(f'[train] cost {batch_time}s for one batch')
 
 @torch.no_grad()
-def st_valid_on_epoch(model, data_loader, device:str, val_steps:int, \
-                      epoch:int, parallel_args:ParallelArgs, \
-                      master_process:bool, pp_schedule, lora:bool):
+def st_valid_on_epoch(model, pp_schedule, data_loader, device:str, val_steps:int, epoch:int, \
+                      parallel_args:ParallelArgs, master_process:bool, lora:bool):
     # set to evaluation mode
     if isinstance(model, list):
         for module in model:
@@ -158,9 +157,9 @@ def dpo_backward_pass(loss, parallel_args:ParallelArgs):
     else:
         loss.backward()
 
-def dpo_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoch:int, \
-                       grad_accum_steps:int, epoch:int, log_interval:int, \
-                       parallel_args:ParallelArgs, master_process:bool, pp_schedule):
+def dpo_train_on_epoch(model, pp_schedule, data_loader, optimizer, device:str, \
+                       steps_per_epoch:int, grad_accum_steps:int, epoch:int, log_interval:int, \
+                       parallel_args:ParallelArgs, master_process:bool):
     # TODO: add pipeline parallel for DPO
     assert parallel_args.pp == 1
     model.train()
@@ -197,9 +196,8 @@ def dpo_train_on_epoch(model, data_loader, optimizer, device:str, steps_per_epoc
             print(f'[train] cost {batch_time}s for one batch')
 
 @torch.no_grad()
-def dpo_valid_on_epoch(model, data_loader, device:str, val_steps:int, \
-                       epoch:int, parallel_args:ParallelArgs, \
-                       master_process:bool, pp_schedule, lora:bool):
+def dpo_valid_on_epoch(model, pp_schedule, data_loader, device:str, val_steps:int, epoch:int, 
+                       parallel_args:ParallelArgs, master_process:bool, lora:bool):
     # TODO: add pipeline parallel for DPO
     assert parallel_args.pp == 1
     model.eval()
