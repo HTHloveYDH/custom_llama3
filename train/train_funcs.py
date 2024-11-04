@@ -251,19 +251,32 @@ def _save_lora_ckpt(model_state_dict:OrderedDict, params:ModelArgs, epoch:int, \
 
 def _save_ckpt(model, parallel_args:ParallelArgs, epoch:int, val_loss_accum:float, \
                checkpoint_path:str, lora:bool):
-    if parallel_args.dp > 1:
-        # FSDP
-        if parallel_args.dp_shard:
-            save_policy = FullStateDictConfig(offload_to_cpu=True, rank0_only=True)
-            with FSDP.state_dict_type(model, StateDictType.FULL_STATE_DICT, save_policy):
-                state_dict, params = model.state_dict(), model.params
-        # DDP
-        else:
-            llm = model.module.llm if hasattr(model.module, 'llm') else model.module
-            state_dict, params = llm.state_dict(), llm.params
+    # pipeline parallel
+    if parallel_args.pp > 1:
+        assert isinstance(model, list)
+        state_dict = OrderedDict()
+        # model: [module, module, ...]
+        for module in model:
+            module_state_dict = module.state_dict()
+            for key in module_state_dict.keys():
+                state_dict[key] = module_state_dict[key]
+    # non-pipeline parallel
     else:
-        llm = model.llm if hasattr(model, 'llm') else model
-        state_dict, params = llm.state_dict(), llm.params
+        # data parallel
+        if parallel_args.dp > 1:
+            # FSDP (fully sharded data parallel)
+            if parallel_args.dp_shard:
+                save_policy = FullStateDictConfig(offload_to_cpu=True, rank0_only=True)
+                with FSDP.state_dict_type(model, StateDictType.FULL_STATE_DICT, save_policy):
+                    state_dict, params = model.state_dict(), model.module.params
+            # DDP (distribute data parallel)
+            else:
+                llm = model.module.llm if hasattr(model.module, 'llm') else model.module
+                state_dict, params = llm.state_dict(), llm.params
+        # non-parallel, tensor parallel
+        else:
+            llm = model.llm if hasattr(model, 'llm') else model
+            state_dict, params = llm.state_dict(), llm.params
     if lora:
         _save_lora_ckpt(state_dict, params, epoch, val_loss_accum, checkpoint_path)
     else:
