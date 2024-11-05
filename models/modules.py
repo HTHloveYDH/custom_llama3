@@ -349,10 +349,6 @@ class MoEFeedForward(nn.Module):
         super().__init__()
         assert args.moe_top_k <= args.n_experts
         self.args = args
-        hidden_dim = int(2 * 4 * args.dim / 3 / args.n_experts)
-        if args.ffn_dim_multiplier is not None:
-            hidden_dim = int(args.ffn_dim_multiplier * hidden_dim)
-        hidden_dim = args.multiple_of * ((hidden_dim + args.multiple_of - 1) // args.multiple_of)
         # gating
         self.gate = nn.Linear(args.dim, args.n_experts, bias=False)
         self.experts = nn.ModuleList([FeedForward(args) for _ in range(args.n_experts)])
