@@ -380,7 +380,9 @@ class MoEFeedForward(nn.Module):
             # Index the correct hidden states and compute the expert hidden state for
             # the current expert. We need to make sure to multiply the output hidden
             # states by `routing_weights` on the corresponding tokens (top-1 and top-2)
+            # [B * T, len(token_idx_list)] -> [len(token_idx_list), dim]
             current_expert_x = x[None, token_idx_list].reshape(-1, dim)
+            # [len(token_idx_list), dim] *  [len(token_idx_list), 1] ->  [len(token_idx_list), dim]
             current_expert_x = expert_layer(current_expert_x) * routing_weights[token_idx_list, topk_idx_list, None]
             # However `index_add_` only support torch tensors for indexing so we'll use
             # the `top_x` tensor here.
