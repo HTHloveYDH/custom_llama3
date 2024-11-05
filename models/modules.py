@@ -370,6 +370,7 @@ class MoEFeedForward(nn.Module):
         # Loop over all available experts in the model and perform the computation on each expert
         for expert_idx in range(self.args.n_experts):
             expert_layer = self.experts[expert_idx]
+            # expert_mask[expert_idx]: [moe_top_k, B * T]
             idx, top_x = torch.where(expert_mask[expert_idx])
             if top_x.shape[0] == 0:
                 continue
