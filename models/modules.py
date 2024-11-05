@@ -371,20 +371,20 @@ class MoEFeedForward(nn.Module):
         for expert_idx in range(self.args.n_experts):
             expert_layer = self.experts[expert_idx]
             # expert_mask[expert_idx]: [moe_top_k, B * T]
-            idx, top_x = torch.where(expert_mask[expert_idx])
+            topk_idx, token_idx = torch.where(expert_mask[expert_idx])
             if top_x.shape[0] == 0:
                 continue
             # in torch it is faster to index using lists than torch tensors
-            top_x_list = top_x.tolist()
-            idx_list = idx.tolist()
+            token_idx_list = token_idx.tolist()
+            topk_idx_list = topk_idx.tolist()
             # Index the correct hidden states and compute the expert hidden state for
             # the current expert. We need to make sure to multiply the output hidden
             # states by `routing_weights` on the corresponding tokens (top-1 and top-2)
-            current_state = x[None, top_x_list].reshape(-1, dim)
-            current_expert_x = expert_layer(current_state) * routing_weights[top_x_list, idx_list, None]
+            current_expert_x = x[None, token_idx_list].reshape(-1, dim)
+            current_expert_x = expert_layer(current_expert_x) * routing_weights[token_idx_list, topk_idx_list, None]
             # However `index_add_` only support torch tensors for indexing so we'll use
             # the `top_x` tensor here.
-            x.index_add_(0, top_x, current_expert_x.to(x.dtype))
+            x.index_add_(0, token_idx, current_expert_x.to(x.dtype))
         x = x.reshape(B, T, dim)
         # return x, router_logits
         return x
