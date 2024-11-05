@@ -48,6 +48,5 @@
         "norm_type": "rmsnorm", 
         "n_experts": -1, 
         "moe_top_k": 1
-
     }
 }
