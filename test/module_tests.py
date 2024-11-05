@@ -118,7 +118,7 @@ def FeedForwardTEST(model_args:ModelArgs):
         print(f'[FeedForward] FeedForwardTEST on device: {device} passed')
 
 def MoEFeedForwardTEST(model_args:ModelArgs):
-    model_args = 4
+    model_args.n_experts = 4
     for device in ['cpu', 'cuda:0']:
         x_out = torch.randn(
             (model_args.max_batch_size, model_args.max_seq_len, model_args.dim),
