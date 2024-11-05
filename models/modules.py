@@ -356,7 +356,7 @@ class MoEFeedForward(nn.Module):
     def forward(self, x:torch.Tensor) -> torch.Tensor:
         B, T, dim = x.shape
         x = x.view(-1, dim)
-        # router_logits: (batch * sequence_length, n_experts)
+        # router_logits: (B * T, n_experts)
         router_logits = self.gate(x)
         routing_weights = F.softmax(router_logits, dim=1, dtype=torch.float)
         routing_weights, selected_experts = torch.topk(routing_weights, self.args.moe_top_k, dim=-1)  # [B * T, moe_top_k], expert index
