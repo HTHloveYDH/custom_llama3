@@ -45,6 +45,9 @@
         "max_batch_size": 4, 
         "max_seq_len": 1024, 
         "long_term_memory": false, 
-        "norm_type": "rmsnorm"
+        "norm_type": "rmsnorm", 
+        "n_experts": -1, 
+        "moe_top_k": 1
+
     }
 }

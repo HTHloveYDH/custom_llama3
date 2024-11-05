@@ -314,21 +314,83 @@ class InfiniteAttention(Attention):
         self.z.zero_()
 
 class FeedForward(nn.Module):
-    def __init__(self, dim:int, hidden_dim:int, multiple_of:int, ffn_dim_multiplier:Optional[float]):
+    def __init__(self, args:ModelArgs):
         super().__init__()
-        self.dim = dim
+        self.args = args
         # hidden_dim should be divisable by 256
-        hidden_dim = int(2 * hidden_dim / 3)
-        if ffn_dim_multiplier is not None:
-            hidden_dim = int(ffn_dim_multiplier * hidden_dim)
-        hidden_dim = multiple_of * ((hidden_dim + multiple_of - 1) // multiple_of)
-        self.w1 = nn.Linear(self.dim, hidden_dim, bias=False)
-        self.w2 = nn.Linear(hidden_dim, self.dim, bias=False)
-        self.w3 = nn.Linear(self.dim, hidden_dim, bias=False)
+        hidden_dim = int(2 * 4 * args.dim / 3)
+        if args.ffn_dim_multiplier is not None:
+            hidden_dim = int(args.ffn_dim_multiplier * hidden_dim)
+        hidden_dim = args.multiple_of * ((hidden_dim + args.multiple_of - 1) // args.multiple_of)
+        self.w1 = nn.Linear(args.dim, hidden_dim, bias=False)
+        self.w2 = nn.Linear(hidden_dim, args.dim, bias=False)
+        self.w3 = nn.Linear(args.dim, hidden_dim, bias=False)
 
     def forward(self, x:torch.Tensor):
         # shape: [bsz,seq_len,dim]
         return self.w2(F.silu(self.w1(x)) * self.w3(x))
+
+'''
+reference url: https://github.com/cooper12121/llama3-8x8b-MoE/blob/main/modeling_file/modeling_llama_moe.py#L750
+'''
+class MoEFeedForward(nn.Module):
+    """
+    This implementation is
+    strictly equivalent to standard MoE with full capacity (no
+    dropped tokens). It's faster since it formulates MoE operations
+    in terms of block-sparse operations to accomodate imbalanced
+    assignments of tokens to experts, whereas standard MoE either
+    (1) drop tokens at the cost of reduced performance or (2) set
+    capacity factor to number of experts and thus waste computation
+    and memory on padding.
+    """
+
+    def __init__(self, args:ModelArgs):
+        super().__init__()
+        self.args = args
+        # hidden_dim should be divisable by 256
+        hidden_dim = int(2 * 4 * args.dim / 3)
+        if args.ffn_dim_multiplier is not None:
+            hidden_dim = int(args.ffn_dim_multiplier * hidden_dim)
+        hidden_dim = args.multiple_of * ((hidden_dim + args.multiple_of - 1) // args.multiple_of)
+        # gating
+        self.gate = nn.Linear(args.dim, args.n_experts, bias=False)
+        self.experts = nn.ModuleList([FeedForward(args) for _ in range(args.n_experts)])
+
+    def forward(self, x:torch.Tensor) -> torch.Tensor:
+        B, T, dim = x.shape
+        x = x.view(-1, dim)
+        # router_logits: (batch * sequence_length, n_experts)
+        router_logits = self.gate(x)
+        routing_weights = F.softmax(router_logits, dim=1, dtype=torch.float)
+        routing_weights, selected_experts = torch.topk(routing_weights, self.args.moe_top_k, dim=-1)  # [B * T, moe_top_k], expert index
+        routing_weights /= routing_weights.sum(dim=-1, keepdim=True)  # 这是相当于百分比？归一化？
+        # we cast back to the input dtype
+        routing_weights = routing_weights.to(x.dtype)
+        x = torch.zeros((B * T, dim), dtype=x.dtype, device=x.device)
+        # One hot encode the selected experts to create an expert mask
+        # this will be used to easily index which expert is going to be sollicitated
+        expert_mask = torch.nn.functional.one_hot(selected_experts, num_classes=self.args.n_experts).permute(2, 1, 0)
+        # Loop over all available experts in the model and perform the computation on each expert
+        for expert_idx in range(self.args.n_experts):
+            expert_layer = self.experts[expert_idx]
+            idx, top_x = torch.where(expert_mask[expert_idx])
+            if top_x.shape[0] == 0:
+                continue
+            # in torch it is faster to index using lists than torch tensors
+            top_x_list = top_x.tolist()
+            idx_list = idx.tolist()
+            # Index the correct hidden states and compute the expert hidden state for
+            # the current expert. We need to make sure to multiply the output hidden
+            # states by `routing_weights` on the corresponding tokens (top-1 and top-2)
+            current_state = x[None, top_x_list].reshape(-1, dim)
+            current_expert_x = expert_layer(current_state) * routing_weights[top_x_list, idx_list, None]
+            # However `index_add_` only support torch tensors for indexing so we'll use
+            # the `top_x` tensor here.
+            x.index_add_(0, top_x, current_expert_x.to(x.dtype))
+        x = x.reshape(B, T, dim)
+        # return x, router_logits
+        return x
 
 class TransformerBlock(nn.Module):
     def __init__(self, args:ModelArgs):
@@ -343,7 +405,10 @@ class TransformerBlock(nn.Module):
             self.ff_norm = FusedRMSNorm(dim=args.dim, eps=args.norm_eps)
         else:
             self.ff_norm = RMSNorm(dim=args.dim, eps=args.norm_eps)
-        self.feedforward = FeedForward(args.dim, 4 * args.dim, args.multiple_of, args.ffn_dim_multiplier)
+        if args.n_experts > 0:
+            self.feedforward = MoEFeedForward(args)
+        else:
+            self.feedforward = FeedForward(args)
 
     def forward(self, x:torch.Tensor, start_pos:int, freqs_cis:torch.Tensor):
         # start_pos: start posotion in inference mode

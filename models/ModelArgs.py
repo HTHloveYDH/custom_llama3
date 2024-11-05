@@ -19,3 +19,6 @@ class ModelArgs:
     long_term_memory: bool = False
 
     norm_type: str = "rmsnorm"
+
+    n_experts: int = -1, 
+    moe_top_k: int = 1

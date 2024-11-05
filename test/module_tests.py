@@ -8,41 +8,42 @@ import torch.nn as nn
 sys.path.append(os.getcwd())
 from data_pipeline.Tokenizer import Tokenizer, ChatFormat
 from models.ModelArgs import ModelArgs
-from models.modules import RoPE, RMSNorm, Attention, InfiniteAttention, FeedForward, TransformerBlock
+from models.modules import RoPE, RMSNorm, Attention, InfiniteAttention, FeedForward, MoEFeedForward, \
+    TransformerBlock
 from models.Transformer import Transformer
 from utils.model_utils import replace_key
 # from data_pipeline.demo import DemoDataLoader
 
 
-def RoPETEST(arg_map):
+def RoPETEST(model_args):
     for device in ['cpu', 'cuda:0']:
         x_norm = torch.randn(
-            (arg_map.max_batch_size, arg_map.max_seq_len, arg_map.dim),
+            (model_args.max_batch_size, model_args.max_seq_len, model_args.dim),
             device=device
         )
-        head_dim = arg_map.dim // arg_map.n_heads
-        wq = nn.Linear(arg_map.dim, arg_map.n_heads * head_dim, bias=False, device=device)
-        wk = nn.Linear(arg_map.dim, arg_map.n_kv_heads * head_dim, bias=False, device=device)
+        head_dim = model_args.dim // model_args.n_heads
+        wq = nn.Linear(model_args.dim, model_args.n_heads * head_dim, bias=False, device=device)
+        wk = nn.Linear(model_args.dim, model_args.n_kv_heads * head_dim, bias=False, device=device)
         xq = wq(x_norm)
         xk = wk(x_norm)
         print(f'xq.shape: {xq.shape}')
         print(f'xk.shape: {xk.shape}')
-        xq = xq.view(xq.shape[0], xq.shape[1],arg_map.n_heads, head_dim)
-        xk = xk.view(xk.shape[0], xk.shape[1],arg_map.n_kv_heads, head_dim)
+        xq = xq.view(xq.shape[0], xq.shape[1],model_args.n_heads, head_dim)
+        xk = xk.view(xk.shape[0], xk.shape[1],model_args.n_kv_heads, head_dim)
         print(f'xq.re-shape: {xq.shape}')
         print(f'xk.re-shape: {xk.shape}')
-        freqs_cis = RoPE.precompute_freqs_cis(head_dim, arg_map.max_seq_len, arg_map.rope_theta, device)
+        freqs_cis = RoPE.precompute_freqs_cis(head_dim, model_args.max_seq_len, model_args.rope_theta, device)
         print(f'freqs_cis.shape: {freqs_cis.shape}')
         xq_rotate, xk_rotate = RoPE.apply_rotary_emb(xq, xk, freqs_cis)
         print(f'[RoPE] xq_rotate.shape: {xq_rotate.shape}')
         print(f'[RoPE] xk_rotate.shape: {xk_rotate.shape}')
         print(f'[RoPE] RoPETEST on device: {device} passed')
 
-def RMSNormTEST(arg_map):
-    rms_norm = RMSNorm(dim=arg_map.dim)
+def RMSNormTEST(model_args):
+    rms_norm = RMSNorm(dim=model_args.dim)
     for device in ['cpu', 'cuda:0']:
         x = torch.randn(
-            (arg_map.max_batch_size, arg_map.max_seq_len, arg_map.dim),
+            (model_args.max_batch_size, model_args.max_seq_len, model_args.dim),
             device=device
         )
         rms_norm.to(device)
@@ -50,22 +51,22 @@ def RMSNormTEST(arg_map):
         print(f'[RMSNorm] x_norm.shape: {x_norm.shape}')
         print(f'[RMSNorm] RMSNormTEST on device: {device} passed')
 
-def AttentionTEST(arg_map):
+def AttentionTEST(model_args):
     for device in ['cpu', 'cuda:0']:
-        head_dim = arg_map.dim // arg_map.n_heads
+        head_dim = model_args.dim // model_args.n_heads
         x_norm = torch.randn(
-            (arg_map.max_batch_size, arg_map.max_seq_len, arg_map.dim),
+            (model_args.max_batch_size, model_args.max_seq_len, model_args.dim),
             device=device
         )
         xk = torch.randn(
-            (arg_map.max_batch_size, arg_map.max_seq_len, arg_map.n_kv_heads, head_dim),
+            (model_args.max_batch_size, model_args.max_seq_len, model_args.n_kv_heads, head_dim),
             device=device
         )
-        n_rep = arg_map.n_heads // arg_map.n_kv_heads
+        n_rep = model_args.n_heads // model_args.n_kv_heads
         keys = Attention.repeat_kv(xk, n_rep)
         print(f'xk.shape: {xk.shape}')
         print(f'keys.shape: {keys.shape}')
-        attention = Attention(arg_map)
+        attention = Attention(model_args)
         attention.to(device)
         freqs_cis = RoPE.precompute_freqs_cis(
             attention.args.dim // attention.args.n_heads, 
@@ -75,22 +76,22 @@ def AttentionTEST(arg_map):
         print(f'[Attention] x_out.shape: {x_out.shape}')
         print(f'[Attention] AttentionTEST on device: {device} passed')
 
-def InfiniteAttentionTEST(arg_map):
+def InfiniteAttentionTEST(model_args):
     for device in ['cpu', 'cuda:0']:
-        head_dim = arg_map.dim // arg_map.n_heads
+        head_dim = model_args.dim // model_args.n_heads
         x_norm = torch.randn(
-            (arg_map.max_batch_size, arg_map.max_seq_len, arg_map.dim),
+            (model_args.max_batch_size, model_args.max_seq_len, model_args.dim),
             device=device
         )
         xk = torch.randn(
-            (arg_map.max_batch_size, arg_map.max_seq_len, arg_map.n_kv_heads, head_dim),
+            (model_args.max_batch_size, model_args.max_seq_len, model_args.n_kv_heads, head_dim),
             device=device
         )
-        n_rep = arg_map.n_heads // arg_map.n_kv_heads
+        n_rep = model_args.n_heads // model_args.n_kv_heads
         keys = InfiniteAttention.repeat_kv(xk, n_rep)
         print(f'xk.shape: {xk.shape}')
         print(f'keys.shape: {keys.shape}')
-        attention = InfiniteAttention(arg_map)
+        attention = InfiniteAttention(model_args)
         attention.to(device)
         freqs_cis = RoPE.precompute_freqs_cis(
             attention.args.dim // attention.args.n_heads, 
@@ -101,27 +102,40 @@ def InfiniteAttentionTEST(arg_map):
         print(f'[InfiniteAttention] x_out.shape: {x_out.shape}')
         print(f'[InfiniteAttention] InfiniteAttentionTEST on device: {device} passed')
 
-def FeedForwardTEST(arg_map):
+def FeedForwardTEST(model_args):
     for device in ['cpu', 'cuda:0']:
         x_out = torch.randn(
-            (arg_map.max_batch_size, arg_map.max_seq_len, arg_map.dim),
+            (model_args.max_batch_size, model_args.max_seq_len, model_args.dim),
             device=device
         )
-        feed_forward = FeedForward(
-            arg_map.dim, 4 * arg_map.dim, arg_map.multiple_of, arg_map.ffn_dim_multiplier
-        )
+        feed_forward = FeedForward(model_args)
         feed_forward.to(device)
-        rms_norm = RMSNorm(dim=arg_map.dim)
+        rms_norm = RMSNorm(dim=model_args.dim)
         rms_norm.to(device)
         x_out = rms_norm(x_out)
         x_out = feed_forward(x_out)
         print(f'[FeedForward] x_out.shape: {x_out.shape}')
         print(f'[FeedForward] FeedForwardTEST on device: {device} passed')
 
-def TransformerBlockTEST(arg_map):
+def MoEFeedForwardTEST(model_args):
     for device in ['cpu', 'cuda:0']:
-        x = torch.randn((arg_map.max_batch_size, arg_map.max_seq_len, arg_map.dim), device=device)
-        transformer_block = TransformerBlock(arg_map)
+        x_out = torch.randn(
+            (model_args.max_batch_size, model_args.max_seq_len, model_args.dim),
+            device=device
+        )
+        feed_forward = MoEFeedForward(model_args)
+        feed_forward.to(device)
+        rms_norm = RMSNorm(dim=model_args.dim)
+        rms_norm.to(device)
+        x_out = rms_norm(x_out)
+        x_out = feed_forward(x_out)
+        print(f'[MoEFeedForward] x_out.shape: {x_out.shape}')
+        print(f'[MoEFeedForward] MoEFeedForwardTEST on device: {device} passed')
+
+def TransformerBlockTEST(model_args):
+    for device in ['cpu', 'cuda:0']:
+        x = torch.randn((model_args.max_batch_size, model_args.max_seq_len, model_args.dim), device=device)
+        transformer_block = TransformerBlock(model_args)
         transformer_block.to(device)
         freqs_cis = RoPE.precompute_freqs_cis(
             transformer_block.args.dim // transformer_block.args.n_heads, 
@@ -131,14 +145,14 @@ def TransformerBlockTEST(arg_map):
         print(f'[TransformerBlock] transformer_block_out.shape: {transformer_block_out.shape}')
         print(f'[TransformerBlock] TransformerBlockTEST on device: {device} passed')
 
-def TransformerTEST(arg_map):
+def TransformerTEST(model_args):
     for device in ['cpu', 'cuda:0']:
-        model = Transformer(arg_map).to(device)
+        model = Transformer(model_args).to(device)
         print('[Transformer] ', model)
         print(f'[Transformer] TransformerTEST on device: {device} passed')
 
-# def DemoDataLoaderTEST(arg_map):
-#     data_loader = DemoDataLoader('./data/demo/txt', arg_map.max_seq_len, arg_map.max_batch_size, 'full')
+# def DemoDataLoaderTEST(model_args):
+#     data_loader = DemoDataLoader('./data/demo/txt', model_args.max_seq_len, model_args.max_batch_size, 'full')
 #     prompts = "Hello World"
 #     encoded_tokens, _ = data_loader.encode(prompts)
 #     decoded_text = data_loader.decode(encoded_tokens)
@@ -206,7 +220,7 @@ def RegularityTEST():
 
 def DropModulesTEST():
     for device in ['cpu', 'cuda:0']:
-        model = Transformer(arg_map).to(device)
+        model = Transformer(model_args).to(device)
         print('[Drop Modules] before drop: ', model)
         model.drop_modules(attn_list=[0, 2, 3], mlp_list=[0, 3])
         print('[Drop Modules] after drop: ', model)
@@ -214,15 +228,16 @@ def DropModulesTEST():
 
 
 if __name__ == '__main__':
-    arg_map = ModelArgs()
-    RoPETEST(arg_map)
-    RMSNormTEST(arg_map)
-    AttentionTEST(arg_map)
-    InfiniteAttentionTEST(arg_map)
-    FeedForwardTEST(arg_map)
-    TransformerBlockTEST(arg_map)
-    TransformerTEST(arg_map)
-    # DemoDataLoaderTEST(arg_map)
+    model_args = ModelArgs()
+    RoPETEST(model_args)
+    RMSNormTEST(model_args)
+    AttentionTEST(model_args)
+    InfiniteAttentionTEST(model_args)
+    FeedForwardTEST(model_args)
+    MoEFeedForwardTEST(model_args)
+    TransformerBlockTEST(model_args)
+    TransformerTEST(model_args)
+    # DemoDataLoaderTEST(model_args)
     TokenizerTEST()
     ChatFormatTEST()
     RegularityTEST()
