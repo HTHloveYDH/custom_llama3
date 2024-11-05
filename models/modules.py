@@ -372,7 +372,7 @@ class MoEFeedForward(nn.Module):
             expert_layer = self.experts[expert_idx]
             # expert_mask[expert_idx]: [moe_top_k, B * T]
             topk_idx, token_idx = torch.where(expert_mask[expert_idx])
-            if top_x.shape[0] == 0:
+            if token_idx.shape[0] == 0:
                 continue
             # in torch it is faster to index using lists than torch tensors
             token_idx_list = token_idx.tolist()
