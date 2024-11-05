@@ -15,7 +15,7 @@ from utils.model_utils import replace_key
 # from data_pipeline.demo import DemoDataLoader
 
 
-def RoPETEST(model_args):
+def RoPETEST(model_args:ModelArgs):
     for device in ['cpu', 'cuda:0']:
         x_norm = torch.randn(
             (model_args.max_batch_size, model_args.max_seq_len, model_args.dim),
@@ -39,7 +39,7 @@ def RoPETEST(model_args):
         print(f'[RoPE] xk_rotate.shape: {xk_rotate.shape}')
         print(f'[RoPE] RoPETEST on device: {device} passed')
 
-def RMSNormTEST(model_args):
+def RMSNormTEST(model_args:ModelArgs):
     rms_norm = RMSNorm(dim=model_args.dim)
     for device in ['cpu', 'cuda:0']:
         x = torch.randn(
@@ -51,7 +51,7 @@ def RMSNormTEST(model_args):
         print(f'[RMSNorm] x_norm.shape: {x_norm.shape}')
         print(f'[RMSNorm] RMSNormTEST on device: {device} passed')
 
-def AttentionTEST(model_args):
+def AttentionTEST(model_args:ModelArgs):
     for device in ['cpu', 'cuda:0']:
         head_dim = model_args.dim // model_args.n_heads
         x_norm = torch.randn(
@@ -76,7 +76,7 @@ def AttentionTEST(model_args):
         print(f'[Attention] x_out.shape: {x_out.shape}')
         print(f'[Attention] AttentionTEST on device: {device} passed')
 
-def InfiniteAttentionTEST(model_args):
+def InfiniteAttentionTEST(model_args:ModelArgs):
     for device in ['cpu', 'cuda:0']:
         head_dim = model_args.dim // model_args.n_heads
         x_norm = torch.randn(
@@ -102,7 +102,7 @@ def InfiniteAttentionTEST(model_args):
         print(f'[InfiniteAttention] x_out.shape: {x_out.shape}')
         print(f'[InfiniteAttention] InfiniteAttentionTEST on device: {device} passed')
 
-def FeedForwardTEST(model_args):
+def FeedForwardTEST(model_args:ModelArgs):
     for device in ['cpu', 'cuda:0']:
         x_out = torch.randn(
             (model_args.max_batch_size, model_args.max_seq_len, model_args.dim),
@@ -117,7 +117,8 @@ def FeedForwardTEST(model_args):
         print(f'[FeedForward] x_out.shape: {x_out.shape}')
         print(f'[FeedForward] FeedForwardTEST on device: {device} passed')
 
-def MoEFeedForwardTEST(model_args):
+def MoEFeedForwardTEST(model_args:ModelArgs):
+    model_args = 4
     for device in ['cpu', 'cuda:0']:
         x_out = torch.randn(
             (model_args.max_batch_size, model_args.max_seq_len, model_args.dim),
@@ -132,26 +133,28 @@ def MoEFeedForwardTEST(model_args):
         print(f'[MoEFeedForward] x_out.shape: {x_out.shape}')
         print(f'[MoEFeedForward] MoEFeedForwardTEST on device: {device} passed')
 
-def TransformerBlockTEST(model_args):
+def TransformerBlockTEST(model_args:ModelArgs):
     for device in ['cpu', 'cuda:0']:
-        x = torch.randn((model_args.max_batch_size, model_args.max_seq_len, model_args.dim), device=device)
-        transformer_block = TransformerBlock(model_args)
-        transformer_block.to(device)
-        freqs_cis = RoPE.precompute_freqs_cis(
-            transformer_block.args.dim // transformer_block.args.n_heads, 
-            transformer_block.args.max_seq_len, transformer_block.args.rope_theta
-        )  # (use 2x max sequence length to be safe)
-        transformer_block_out = transformer_block(x, start_pos=0, freqs_cis=freqs_cis.to(device))
-        print(f'[TransformerBlock] transformer_block_out.shape: {transformer_block_out.shape}')
-        print(f'[TransformerBlock] TransformerBlockTEST on device: {device} passed')
+        for n_experts in [-1, 4]:
+            model_args.n_experts = n_experts
+            x = torch.randn((model_args.max_batch_size, model_args.max_seq_len, model_args.dim), device=device)
+            transformer_block = TransformerBlock(model_args)
+            transformer_block.to(device)
+            freqs_cis = RoPE.precompute_freqs_cis(
+                transformer_block.args.dim // transformer_block.args.n_heads, 
+                transformer_block.args.max_seq_len, transformer_block.args.rope_theta
+            )  # (use 2x max sequence length to be safe)
+            transformer_block_out = transformer_block(x, start_pos=0, freqs_cis=freqs_cis.to(device))
+            print(f'[TransformerBlock] transformer_block_out.shape: {transformer_block_out.shape}')
+            print(f'[TransformerBlock] TransformerBlockTEST on device: {device} passed')
 
-def TransformerTEST(model_args):
+def TransformerTEST(model_args:ModelArgs):
     for device in ['cpu', 'cuda:0']:
         model = Transformer(model_args).to(device)
         print('[Transformer] ', model)
         print(f'[Transformer] TransformerTEST on device: {device} passed')
 
-# def DemoDataLoaderTEST(model_args):
+# def DemoDataLoaderTEST(model_args:ModelArgs):
 #     data_loader = DemoDataLoader('./data/demo/txt', model_args.max_seq_len, model_args.max_batch_size, 'full')
 #     prompts = "Hello World"
 #     encoded_tokens, _ = data_loader.encode(prompts)

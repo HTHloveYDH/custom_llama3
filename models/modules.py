@@ -348,8 +348,7 @@ class MoEFeedForward(nn.Module):
     def __init__(self, args:ModelArgs):
         super().__init__()
         self.args = args
-        # hidden_dim should be divisable by 256
-        hidden_dim = int(2 * 4 * args.dim / 3)
+        hidden_dim = int(2 * 4 * args.dim / 3 / args.n_experts)
         if args.ffn_dim_multiplier is not None:
             hidden_dim = int(args.ffn_dim_multiplier * hidden_dim)
         hidden_dim = args.multiple_of * ((hidden_dim + args.multiple_of - 1) // args.multiple_of)
