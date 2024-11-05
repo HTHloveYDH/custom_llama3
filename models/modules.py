@@ -355,17 +355,17 @@ class MoEFeedForward(nn.Module):
 
     def forward(self, x:torch.Tensor) -> torch.Tensor:
         B, T, dim = x.shape
-        x = x.view(-1, dim)
-        # router_logits: (B * T, n_experts)
-        router_logits = self.gate(x)
-        routing_weights = F.softmax(router_logits, dim=1, dtype=torch.float)
-        routing_weights, selected_experts = torch.topk(routing_weights, self.args.moe_top_k, dim=-1)  # [B * T, moe_top_k], expert index
-        routing_weights /= routing_weights.sum(dim=-1, keepdim=True)  # 这是相当于百分比？归一化？
+        x = x.view(-1, dim)  # [B * T, dim]
+        router_logits = self.gate(x)  # [B * T, n_experts]
+        routing_weights = F.softmax(router_logits, dim=1, dtype=torch.float)  # [B * T, n_experts]
+        routing_weights, selected_experts = torch.topk(routing_weights, self.args.moe_top_k, dim=-1)  # [B * T, moe_top_k], [B * T, moe_top_k]
+        routing_weights /= routing_weights.sum(dim=-1, keepdim=True)  # [B * T, moe_top_k], 这是相当于百分比？归一化？
         # we cast back to the input dtype
-        routing_weights = routing_weights.to(x.dtype)
-        x = torch.zeros((B * T, dim), dtype=x.dtype, device=x.device)
+        routing_weights = routing_weights.to(x.dtype)  # [B * T, moe_top_k]
+        x = torch.zeros((B * T, dim), dtype=x.dtype, device=x.device)  # [B * T, dim]
         # One hot encode the selected experts to create an expert mask
         # this will be used to easily index which expert is going to be sollicitated
+        # [B * T, moe_top_k, n_experts] -> [n_experts, moe_top_k, B * T]
         expert_mask = torch.nn.functional.one_hot(selected_experts, num_classes=self.args.n_experts).permute(2, 1, 0)
         # Loop over all available experts in the model and perform the computation on each expert
         for expert_idx in range(self.args.n_experts):
