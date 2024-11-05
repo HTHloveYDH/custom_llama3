@@ -347,6 +347,7 @@ class MoEFeedForward(nn.Module):
 
     def __init__(self, args:ModelArgs):
         super().__init__()
+        assert args.moe_top_k <= args.n_experts
         self.args = args
         hidden_dim = int(2 * 4 * args.dim / 3 / args.n_experts)
         if args.ffn_dim_multiplier is not None:
