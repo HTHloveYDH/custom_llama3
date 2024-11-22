@@ -86,9 +86,9 @@ class InstructionSFTDataLoaderLite(BaseSFTDataLoaderLite):
     
     def complete_instruction(self, instruction:str, context=None):
         # TODO: 
-        completed_instruction = instruction
+        completed_instruction = '\n[INSTRUCTION]\n' + instruction
         if context:
-            completed_instruction += '\n[CONTEXT]\n' + context
+            completed_instruction += '\n[INPUT]\n' + context
         return completed_instruction
 
 class DialogSFTDataLoaderLite(BaseSFTDataLoaderLite):
