@@ -409,7 +409,7 @@ class TransformerBlock(nn.Module):
         else:
             self.feedforward = FeedForward(args)
 
-    def forward(self, x:torch.Tensor, start_pos:int, freqs_cis:torch.Tensor):
+    def forward(self, x: torch.Tensor, start_pos:int, freqs_cis:torch.Tensor):
         # start_pos: start posotion in inference mode
         # 1) input embedding to attention_norm,
         #    and attention_norm output is transfered to attention
